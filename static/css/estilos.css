@@ -807,8 +807,7 @@ a { text-decoration: none; }
 }
 .acceso-logo-movil strong { font-weight: 700; color: var(--acento-oscuro); }
 
-.acceso-titulo { font-size: 1.5rem; font-weight: 600; margin-bottom: .3rem; }
-.acceso-ayuda { color: var(--texto-tenue); font-size: .85rem; margin-bottom: 1.75rem; }
+.acceso-titulo { font-size: 1.5rem; font-weight: 600; margin-bottom: 1.75rem; }
 
 /* Campo con icono a la izquierda y ojo a la derecha */
 .campo-icono { position: relative; }
