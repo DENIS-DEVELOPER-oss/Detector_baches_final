@@ -436,6 +436,11 @@ siga siendo útil en una copia recién clonada.
 
 ## 10. Despliegue
 
+> **Guía paso a paso para un VPS con Ubuntu: [DESPLIEGUE.md](DESPLIEGUE.md)**
+> (sistema, MariaDB, gunicorn como servicio, nginx, HTTPS y copias de seguridad).
+>
+> Para contenedores está el [Dockerfile](Dockerfile), con PyTorch solo para CPU.
+
 ### Antes de subir a GitHub
 
 El `.gitignore` ya excluye lo que no debe publicarse: **`.env`** (secretos), **`media/`**
