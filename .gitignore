@@ -31,6 +31,12 @@ ENV/
 db.sqlite3
 db.sqlite3-journal
 
+# Volcados de la base de datos. Nunca al repositorio: llevan los hashes de las
+# contrasenas y los datos de los usuarios. Para respaldos, ver DESPLIEGUE.md.
+*.sql
+*.sql.gz
+*.dump
+
 # Archivos subidos por los usuarios y resultados del analisis.
 # No se versionan: los genera la aplicacion y crecen sin limite.
 media/
