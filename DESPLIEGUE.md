@@ -413,9 +413,25 @@ systemctl is-active mariadb mysql nginx php8.3-fpm 2>/dev/null
   Abra el puerto (`sudo ufw allow 8080/tcp`) y entre por `http://SU_IP:8080`. Añada esa
   dirección a `ALLOWED_HOSTS` y `CSRF_TRUSTED_ORIGINS` en el `.env`.
 
-### 2. MySQL: no reconfigure lo que ya funciona
+### 2. MySQL: no instale otro servidor ni reconfigure el que hay
 
-**No ejecute `mysql_secure_installation`** si la otra aplicación ya usa MySQL: puede
+**Compruebe primero cuál está corriendo:**
+
+```bash
+systemctl is-active mysql mariadb
+mysql --version
+```
+
+Si ya hay uno activo, **omita `mariadb-server` del `apt install` del paso 1**. Instalar
+MariaDB junto a MySQL provoca conflictos de paquetes y puede dejar sin servicio a la
+aplicación existente.
+
+Django 5.0 necesita **MySQL 8.0.11+** o **MariaDB 10.4+**; compruébelo con
+`mysql --version` antes de empezar.
+
+**No ejecute `mysql_secure_installation`**
+
+si la otra aplicación ya usa MySQL: puede
 cambiar la contraseña de `root` y dejarla sin acceso. Cree solo lo suyo:
 
 ```bash
