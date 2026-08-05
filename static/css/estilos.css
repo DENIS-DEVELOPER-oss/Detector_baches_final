@@ -815,16 +815,6 @@ a { text-decoration: none; }
   color: #b0721a;
 }
 
-.acceso-nota {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--borde);
-  font-size: .78rem;
-  color: var(--texto-tenue);
-  line-height: 1.6;
-}
-.acceso-nota .bi { color: var(--acento-oscuro); margin-right: .25rem; }
-
 /* -- Adaptable ------------------------------------------------------------ */
 @media (max-width: 991.98px) {
   .acceso { grid-template-columns: 1fr; }
