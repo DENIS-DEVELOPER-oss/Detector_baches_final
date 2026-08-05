@@ -1,0 +1,53 @@
+{% load static leaflet_tags %}{% comment %}
+Carga del proveedor de mapas. Va dentro de {% block js %}, antes de usar
+`crearMapa(...)`.
+
+  Sin GOOGLE_MAPS_API_KEY -> django-leaflet: {% leaflet_js %} trae Leaflet y los
+                             plugins de LEAFLET_CONFIG, y {% leaflet_json_config %}
+                             expone el encuadre y los tiles definidos en settings.
+  Con clave               -> Google Maps JavaScript API + MarkerClusterer.
+
+IMPORTANTE - dos trampas que ya costaron un mapa en gris:
+
+  1. Los numeros NUNCA se interpolan directamente en JavaScript. Con LANGUAGE_CODE
+     es-PE, Django escribe -15.65 como "-15,65", y [-15,65, -70,1] se convierte en
+     un arreglo de cuatro numeros: el mapa acababa centrado en el oceano Indico.
+     Por eso el centro viaja por `json_script`, que serializa en JSON real.
+  2. {% templatetag openblock %} leaflet_json_config {% templatetag closeblock %} se
+     autoescapa (&quot;), lo que dentro de <script> es un error de sintaxis. De ahi
+     el {% templatetag openblock %} autoescape off {% templatetag closeblock %}.
+{% endcomment %}
+
+{% if not GOOGLE_MAPS_API_KEY %}{% leaflet_js plugins="markercluster" %}{% endif %}
+
+{{ MAPA_CENTRO|json_script:"mapa-centro-json" }}
+<script>
+  (function () {
+    var centro = JSON.parse(document.getElementById('mapa-centro-json').textContent);
+    window.CONFIG_MAPAS = {
+      claveGoogle: '{{ GOOGLE_MAPS_API_KEY|escapejs }}',
+      centro: [centro.lat, centro.lng],
+      zoom: centro.zoom,
+      {% if not GOOGLE_MAPS_API_KEY %}
+      leaflet: {% autoescape off %}{% leaflet_json_config %}{% endautoescape %},
+      {% endif %}
+      urlBuscarDireccion: '{% url "analisis:geocodificar" %}',
+      urlDireccionInversa: '{% url "analisis:geocodificar_inverso" %}'
+    };
+  })();
+
+  {% if GOOGLE_MAPS_API_KEY %}
+  // La API de Google avisa por callback; se expone como promesa.
+  window.googleMapsListo = new Promise(function (resolver) {
+    window.__googleMapsCargado = resolver;
+  });
+  {% endif %}
+</script>
+
+{% if GOOGLE_MAPS_API_KEY %}
+  <script src="https://unpkg.com/@googlemaps/markerclusterer@2.5.3/dist/index.umd.js"></script>
+  <script async
+          src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&loading=async&language=es&region=PE&callback=__googleMapsCargado"></script>
+{% endif %}
+
+<script src="{% static 'js/mapas.js' %}"></script>

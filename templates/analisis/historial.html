@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block titulo %}Historial de detecciones{% endblock %}
+{% block ruta %}Historial{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>{% if es_admin %}Todas las detecciones{% else %}Mis detecciones{% endif %}</h1>
+    <p class="subtitulo">{{ page_obj.paginator.count|default:analisis|length }} analisis encontrado(s)</p>
+  </div>
+  <a href="{% url 'deteccion:modulo' %}" class="btn btn-primary fw-semibold">
+    <i class="bi bi-cpu"></i> Nueva deteccion
+  </a>
+</div>
+
+<div class="tarjeta mb-3">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Filtros</h2>
+    <a href="{% url 'analisis:historial' %}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+  </div>
+  <form method="get" class="tarjeta-cuerpo">
+    <div class="row g-2 align-items-end">
+      {% for campo in filtro %}
+        <div class="col-6 col-md">
+          {% if campo.field.widget.input_type == 'checkbox' %}
+            <div class="form-check mt-4">
+              {{ campo }}
+              <label class="form-check-label small" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            </div>
+          {% else %}
+            <label class="form-label">{{ campo.label }}</label>
+            {{ campo }}
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="col-12 col-md-auto">
+        <button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filtrar</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if analisis %}
+<div class="row g-3">
+  {% for a in analisis %}
+  <div class="col-md-6 col-xxl-4">
+    <div class="tarjeta h-100 overflow-hidden">
+      <a href="{{ a.get_absolute_url }}" class="position-relative d-block">
+        {% if a.imagen_previa %}
+          <img src="{{ a.imagen_previa.url }}" class="miniatura-reporte" alt="{{ a.titulo }}">
+          {% if a.es_video %}
+            <span class="marca-video">
+              <i class="bi bi-play-fill"></i> {{ a.frames_analizados }} cuadro{{ a.frames_analizados|pluralize }}
+            </span>
+          {% endif %}
+        {% else %}
+          <div class="miniatura-vacia">
+            <i class="bi {{ a.icono_origen }}" style="font-size:2.2rem"></i>
+          </div>
+        {% endif %}
+
+        {% if a.severidad_maxima %}
+          <span class="badge badge-sev text-bg-{{ a.color_severidad }} position-absolute" style="top:.6rem;right:.6rem">
+            {{ a.get_severidad_maxima_display }}
+          </span>
+        {% else %}
+          <span class="badge text-bg-light text-dark position-absolute" style="top:.6rem;right:.6rem">Sin danos</span>
+        {% endif %}
+
+        <span class="badge text-bg-dark position-absolute" style="top:.6rem;left:.6rem">
+          <i class="bi {{ a.icono_origen }}"></i> {{ a.get_origen_display }}
+        </span>
+      </a>
+
+      <div class="tarjeta-cuerpo">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <code class="small text-muted">{{ a.codigo }}</code>
+          <span class="small text-muted">{{ a.creado_en|date:"d/m/Y H:i" }}</span>
+        </div>
+        <h2 class="h6 mb-1">
+          <a class="text-decoration-none" style="color:var(--texto)" href="{{ a.get_absolute_url }}">
+            {{ a.titulo|truncatechars:48 }}
+          </a>
+        </h2>
+
+        {% if a.tiene_ubicacion %}
+          <p class="text-muted small mb-3">
+            <i class="bi bi-geo-alt-fill text-acento"></i>
+            {{ a.direccion_referencia|default:a.zona|default:"Ubicado en el mapa"|truncatechars:44 }}
+          </p>
+        {% else %}
+          <p class="mb-3">
+            <a href="{% url 'analisis:ubicacion' a.pk %}" class="enlace-ubicar">
+              <i class="bi bi-geo-alt"></i> Sin ubicar &mdash; situar en el mapa
+            </a>
+          </p>
+        {% endif %}
+
+        <div class="d-flex gap-3 small mb-2">
+          <span><i class="bi bi-cone-striped text-danger"></i> <strong>{{ a.total_baches }}</strong> baches</span>
+          <span><i class="bi bi-bezier2 text-warning"></i> <strong>{{ a.total_grietas }}</strong> grietas</span>
+        </div>
+
+        {% if a.total_detecciones %}
+        <div class="d-flex gap-1 flex-wrap">
+          {% if a.sev_baja %}<span class="badge text-bg-success">Baja {{ a.sev_baja }}</span>{% endif %}
+          {% if a.sev_media %}<span class="badge text-bg-warning">Media {{ a.sev_media }}</span>{% endif %}
+          {% if a.sev_alta %}<span class="badge text-bg-orange">Alta {{ a.sev_alta }}</span>{% endif %}
+          {% if a.sev_critica %}<span class="badge text-bg-danger">Critica {{ a.sev_critica }}</span>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      {% if es_admin %}
+      <div class="px-3 pb-3 small text-muted">
+        <i class="bi bi-person"></i> {{ a.usuario.nombre_para_mostrar }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a></li>
+    {% endif %}
+    <li class="page-item active"><span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="tarjeta text-center py-5">
+  <i class="bi bi-radar text-secondary" style="font-size:2.6rem"></i>
+  <p class="text-muted mt-2 mb-3">No se encontraron analisis con esos criterios.</p>
+  <div><a href="{% url 'deteccion:modulo' %}" class="btn btn-primary fw-semibold">Realizar una deteccion</a></div>
+</div>
+{% endif %}
+{% endblock %}

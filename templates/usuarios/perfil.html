@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block titulo %}Mi perfil{% endblock %}
+{% block ruta %}Mi perfil{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center g-3">
+  <div class="col-lg-4">
+    <div class="tarjeta">
+      <div class="tarjeta-cuerpo text-center py-4">
+        {% if user.foto %}
+          <img src="{{ user.foto.url }}" class="rounded-circle mb-3" width="96" height="96"
+               style="object-fit:cover;border:3px solid var(--acento)" alt="">
+        {% else %}
+          <div class="rounded-circle mx-auto mb-3 d-grid" style="width:96px;height:96px;place-items:center;background:var(--acento);color:#fff;font-size:2.2rem;font-weight:700">
+            {{ user.nombre_para_mostrar|slice:":1"|upper }}
+          </div>
+        {% endif %}
+        <h1 class="h5 mb-1">{{ user.nombre_para_mostrar }}</h1>
+        <p class="text-muted small mb-3">{{ user.email }}</p>
+        <span class="badge {% if user.es_admin %}text-bg-dark{% else %}bg-acento{% endif %}">{{ user.get_rol_display }}</span>
+        <span class="badge text-bg-light text-dark">{{ user.get_ciudad_display }}</span>
+      </div>
+    </div>
+
+    <div class="tarjeta mt-3">
+      <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Mi actividad</h2></div>
+      <div class="tarjeta-cuerpo">
+        <table class="table tabla-compacta mb-3">
+          <tr><td class="text-muted">Analisis realizados</td><td class="text-end fw-semibold">{{ total_analisis }}</td></tr>
+          <tr><td class="text-muted">Danos detectados</td><td class="text-end fw-semibold">{{ total_danos }}</td></tr>
+          <tr><td class="text-muted">De severidad critica</td><td class="text-end fw-semibold text-danger">{{ total_criticos }}</td></tr>
+        </table>
+        <a href="{% url 'analisis:historial' %}" class="btn btn-outline-primary w-100">
+          <i class="bi bi-clock-history"></i> Ver mi historial
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="tarjeta">
+      <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Datos personales</h2></div>
+      <form method="post" enctype="multipart/form-data" novalidate class="tarjeta-cuerpo">
+        {% csrf_token %}
+        <div class="row g-3">
+          {% for campo in form %}
+            <div class="col-md-6">
+              <label class="form-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+              {{ campo }}
+              {% for error in campo.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary fw-semibold mt-4" type="submit">Guardar cambios</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

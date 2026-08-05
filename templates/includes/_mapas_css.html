@@ -1,0 +1,8 @@
+{% load leaflet_tags %}{% comment %}
+Hojas de estilo del proveedor de mapas. Va dentro de {% block css %}.
+
+  Sin GOOGLE_MAPS_API_KEY -> django-leaflet ({% leaflet_css %} incluye Leaflet
+                             y los plugins declarados en LEAFLET_CONFIG).
+  Con clave               -> Google Maps no necesita CSS propio.
+{% endcomment %}
+{% if not GOOGLE_MAPS_API_KEY %}{% leaflet_css plugins="markercluster" %}{% endif %}

@@ -1,0 +1,37 @@
+# Detector de Baches - Juliaca y Puno
+#
+#     pip install -r requirements.txt
+#
+# Notas de version importantes:
+#   - Django 5.0.x es la ultima serie compatible con MariaDB 10.4 (la de XAMPP).
+#     Django 5.1+ exige 10.5 y Django 6.0 exige 10.6. Si despliega sobre
+#     MySQL 8 o MariaDB 10.6+, puede subir a Django 5.2 LTS sin cambios.
+#   - django-map-widgets NO se usa: importa django.contrib.gis, que exige las
+#     librerias nativas GDAL y GEOS (sin wheel para Windows/Python 3.12).
+
+# --- Base ---------------------------------------------------------------
+Django>=5.0,<5.1
+mysqlclient>=2.2
+python-dotenv>=1.0
+Pillow>=10.0                 # imagenes y lectura del GPS en el EXIF
+
+# --- Motor de deteccion --------------------------------------------------
+ultralytics>=8.3
+opencv-python>=4.9
+torch>=2.2
+torchvision>=0.17
+
+# ffmpeg empaquetado. OpenCV solo escribe MPEG-4 Parte 2, que el navegador no
+# reproduce; el video anotado se recodifica a H.264 con este binario.
+# Llega tambien como dependencia de ultralytics, pero se declara aparte porque
+# el proyecto depende de el directamente.
+imageio-ffmpeg>=0.4.9
+
+# --- Mapas y georreferenciacion -----------------------------------------
+django-leaflet>=0.29         # mapas: assets, configuracion y plugins
+geopy>=2.4                   # direccion <-> coordenadas (Nominatim, sin clave)
+
+# --- Servidor de produccion ---------------------------------------------
+# Necesarios solo al desplegar; en desarrollo basta con runserver.
+gunicorn>=21.2; sys_platform != "win32"
+whitenoise>=6.6              # sirve los estaticos sin un servidor web aparte

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block titulo %}Mapa de baches{% endblock %}
+{% block ruta %}Mapa de baches{% endblock %}
+
+{% block css %}{% include "includes/_mapas_css.html" %}{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>Mapa de baches detectados</h1>
+    <p class="subtitulo"><span id="contador">0</span> analisis geolocalizado(s)</p>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-outline-secondary btn-sm" id="btnJuliaca">Juliaca</button>
+    <button class="btn btn-outline-secondary btn-sm" id="btnPuno">Puno</button>
+    <button class="btn btn-outline-primary btn-sm" id="btnTodo">Vista general</button>
+  </div>
+</div>
+
+<div class="tarjeta mb-3">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Filtros</h2>
+    <a href="{% url 'analisis:mapa' %}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+  </div>
+  <form method="get" class="tarjeta-cuerpo">
+    <div class="row g-2 align-items-end">
+      {% for campo in filtro %}
+        <div class="col-6 col-md">
+          {% if campo.field.widget.input_type == 'checkbox' %}
+            <div class="form-check mt-4">
+              {{ campo }}
+              <label class="form-check-label small" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+            </div>
+          {% else %}
+            <label class="form-label">{{ campo.label }}</label>
+            {{ campo }}
+          {% endif %}
+        </div>
+      {% endfor %}
+      <div class="col-12 col-md-auto">
+        <button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filtrar</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="tarjeta">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Severidad maxima por analisis</h2>
+    <div class="leyenda-severidad">
+      <span><span class="punto" style="background:#ced5dc"></span> Sin danos</span>
+      <span><span class="punto" style="background:#4fc98a"></span> Baja</span>
+      <span><span class="punto" style="background:#f5b544"></span> Media</span>
+      <span><span class="punto" style="background:#f2704f"></span> Alta</span>
+      <span><span class="punto" style="background:#c0392b"></span> Critica</span>
+    </div>
+  </div>
+  <div class="p-2"><div id="mapa" class="mapa"></div></div>
+</div>
+{% endblock %}
+
+{% block js %}
+{% include "includes/_mapas_js.html" %}
+<script>
+  // Las coordenadas del encuadre general llegan por CONFIG_MAPAS (JSON), no
+  // interpoladas: con locale es-PE se escribirian con coma y romperian el array.
+  const CENTROS = {
+    juliaca: [-15.4997, -70.1330],
+    puno: [-15.8402, -70.0219],
+    general: CONFIG_MAPAS.centro
+  };
+  const ZOOM_GENERAL = CONFIG_MAPAS.zoom;
+
+  crearMapa({ contenedor: 'mapa' })
+    .then(mapa => {
+      const parametros = new URLSearchParams(window.location.search);
+      parametros.delete('page');
+
+      fetch('{% url "analisis:geojson" %}?' + parametros.toString())
+        .then(r => r.json())
+        .then(datos => {
+          const total = mapa.cargarGeoJSON(datos);
+          mapa.agrupar();
+          document.getElementById('contador').textContent = total;
+          if (total) mapa.ajustarVista();
+        })
+        .catch(() => alert('No se pudieron cargar los analisis del mapa.'));
+
+      document.getElementById('btnJuliaca').onclick = () => mapa.centrarEn(...CENTROS.juliaca, 13);
+      document.getElementById('btnPuno').onclick = () => mapa.centrarEn(...CENTROS.puno, 13);
+      document.getElementById('btnTodo').onclick = () => mapa.centrarEn(...CENTROS.general, ZOOM_GENERAL);
+    })
+    .catch(e => console.error('No se pudo crear el mapa:', e));
+</script>
+{% endblock %}

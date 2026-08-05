@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block titulo %}Ubicar {{ analisis.codigo }}{% endblock %}
+{% block ruta %}Georreferenciacion{% endblock %}
+
+{% block css %}{% include "includes/_mapas_css.html" %}{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>Ubicar en el mapa</h1>
+    <p class="subtitulo">
+      <code class="text-muted">{{ analisis.codigo }}</code> &middot; {{ analisis.titulo }}
+      {% if analisis.tiene_ubicacion %}
+        &middot; <span class="text-success"><i class="bi bi-geo-alt-fill"></i> ya ubicado</span>
+      {% else %}
+        &middot; <span class="text-danger"><i class="bi bi-geo-alt"></i> sin ubicar</span>
+      {% endif %}
+    </p>
+  </div>
+  <a href="{{ analisis.get_absolute_url }}" class="btn btn-outline-secondary">Volver al analisis</a>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger py-2 small">
+      {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <!-- ============ Mapa ============ -->
+    <div class="col-xl-8">
+      <div class="tarjeta h-100">
+        <div class="tarjeta-cabecera">
+          <h2 class="tarjeta-titulo">Marque el punto exacto</h2>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnGps">
+            <i class="bi bi-crosshair"></i> Usar mi ubicacion
+          </button>
+        </div>
+
+        <div class="tarjeta-cuerpo pb-2">
+          <label class="form-label">Buscar una direccion</label>
+          <div class="buscador-direccion">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="text" class="form-control" id="buscarDireccion" autocomplete="off"
+                     placeholder="Ej. Av. El Sol, Puno">
+              <span class="input-group-text d-none" id="cargandoDireccion">
+                <span class="spinner-border spinner-border-sm"></span>
+              </span>
+            </div>
+            <ul class="resultados-direccion d-none" id="resultadosDireccion"></ul>
+          </div>
+
+          <!-- ---- Puente con Google Maps ---- -->
+          <div class="puente-google mt-3">
+            <div class="puente-google-cabecera">
+              <span><i class="bi bi-geo-alt-fill"></i> Elegir el punto en Google Maps</span>
+              <a href="#" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"
+                 id="abrirGoogle">
+                <i class="bi bi-box-arrow-up-right"></i> Abrir Google Maps
+              </a>
+            </div>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-clipboard"></i></span>
+              <input type="text" class="form-control" id="pegarGoogle" autocomplete="off"
+                     placeholder="Pegue aqui las coordenadas o el enlace de Google Maps">
+              <button class="btn btn-primary" type="button" id="usarGoogle">Usar</button>
+            </div>
+            <div class="form-text small mb-0" id="ayudaGoogle">
+              En Google Maps, haga clic derecho sobre el punto y elija las coordenadas para
+              copiarlas; tambien sirve pegar el enlace de la barra de direcciones.
+            </div>
+          </div>
+        </div>
+
+        <div class="p-2 pt-0"><div id="mapa" class="mapa"></div></div>
+
+        <div class="tarjeta-cuerpo pt-2">
+          <div class="form-text small mb-0">
+            Haga clic sobre el mapa o arrastre el marcador. Tambien puede elegir una zona
+            y ajustar despues.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ Datos ============ -->
+    <div class="col-xl-4">
+      <div class="tarjeta">
+        <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Datos de ubicacion</h2></div>
+        <div class="tarjeta-cuerpo">
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.zona.id_for_label }}">{{ form.zona.label }}</label>
+            {{ form.zona }}
+            {% for error in form.zona.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.direccion_referencia.id_for_label }}">
+              {{ form.direccion_referencia.label }}
+            </label>
+            {{ form.direccion_referencia }}
+            {% for error in form.direccion_referencia.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label" for="{{ form.latitud.id_for_label }}">Latitud</label>
+              {{ form.latitud }}
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="{{ form.longitud.id_for_label }}">Longitud</label>
+              {{ form.longitud }}
+            </div>
+          </div>
+          {% for error in form.latitud.errors %}<div class="text-danger small mb-2">{{ error }}</div>{% endfor %}
+          {% for error in form.longitud.errors %}<div class="text-danger small mb-2">{{ error }}</div>{% endfor %}
+
+          <button type="submit" class="btn btn-primary w-100 fw-semibold">
+            <i class="bi bi-geo-alt-fill"></i> Guardar ubicacion
+          </button>
+          <a href="{{ analisis.get_absolute_url }}" class="btn btn-outline-secondary w-100 mt-2">
+            Cancelar
+          </a>
+        </div>
+      </div>
+
+      <div class="tarjeta mt-3">
+        <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">El analisis</h2></div>
+        {% if analisis.imagen_previa %}
+          <img src="{{ analisis.imagen_previa.url }}" class="miniatura-reporte" alt="">
+        {% else %}
+          <div class="miniatura-vacia"><i class="bi {{ analisis.icono_origen }}" style="font-size:2rem"></i></div>
+        {% endif %}
+        <div class="tarjeta-cuerpo">
+          <table class="table tabla-compacta mb-0">
+            <tr><td class="text-muted">Baches</td><td class="text-end fw-semibold">{{ analisis.total_baches }}</td></tr>
+            <tr><td class="text-muted">Grietas</td><td class="text-end fw-semibold">{{ analisis.total_grietas }}</td></tr>
+            <tr>
+              <td class="text-muted">Severidad</td>
+              <td class="text-end">
+                {% if analisis.severidad_maxima %}
+                  <span class="badge badge-sev text-bg-{{ analisis.color_severidad }}">
+                    {{ analisis.get_severidad_maxima_display }}
+                  </span>
+                {% else %}<span class="text-muted">Sin danos</span>{% endif %}
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+{{ zonas_json|json_script:"zonas-json" }}
+{% if punto %}{{ punto|json_script:"punto-json" }}{% endif %}
+{% endblock %}
+
+{% block js %}
+{% include "includes/_mapas_js.html" %}
+<script>
+  const ZONAS = JSON.parse(document.getElementById('zonas-json').textContent);
+  const nodoPunto = document.getElementById('punto-json');
+  const PUNTO = nodoPunto ? JSON.parse(nodoPunto.textContent) : null;
+
+  const campoLat = document.getElementById('{{ form.latitud.id_for_label }}');
+  const campoLng = document.getElementById('{{ form.longitud.id_for_label }}');
+  const campoZona = document.getElementById('{{ form.zona.id_for_label }}');
+  const campoRef = document.getElementById('{{ form.direccion_referencia.id_for_label }}');
+
+  const geocodificador = new Geocodificador();
+
+  crearMapa({
+    contenedor: 'mapa',
+    centro: PUNTO ? [PUNTO.lat, PUNTO.lng] : undefined,
+    zoom: PUNTO ? 17 : undefined
+  }).then(mapa => {
+
+    function escribir(lat, lng) {
+      campoLat.value = lat.toFixed(7);
+      campoLng.value = lng.toFixed(7);
+    }
+
+    // ---- Enlace a Google Maps, siempre apuntando al punto actual ----
+    const abrirGoogle = document.getElementById('abrirGoogle');
+
+    function refrescarEnlaceGoogle(lat, lng) {
+      abrirGoogle.href = (lat === undefined)
+        ? enlaceGoogleMaps(CONFIG_MAPAS.centro[0], CONFIG_MAPAS.centro[1], CONFIG_MAPAS.zoom)
+        : enlaceGoogleMapsPunto(lat.toFixed(7), lng.toFixed(7));
+    }
+    refrescarEnlaceGoogle();
+
+    mapa.habilitarSeleccion((lat, lng) => {
+      escribir(lat, lng);
+      refrescarEnlaceGoogle(lat, lng);
+      // Rellena la referencia solo si esta vacia, para no pisar lo escrito
+      if (!campoRef.value.trim()) {
+        geocodificador.direccionDe(lat, lng).then(d => {
+          if (d && !campoRef.value.trim()) campoRef.value = d;
+        });
+      }
+    });
+
+    if (PUNTO) mapa.fijarSeleccion(PUNTO.lat, PUNTO.lng, 17);
+
+    // ---- Traer un punto elegido en Google Maps ----
+    const pegar = document.getElementById('pegarGoogle');
+    const ayuda = document.getElementById('ayudaGoogle');
+    const AYUDA_ORIGINAL = ayuda.textContent;
+
+    function avisar(texto, clase) {
+      ayuda.textContent = texto;
+      ayuda.className = 'form-text small mb-0 ' + (clase || '');
+    }
+
+    function usarPegado() {
+      const punto = parsearCoordenadas(pegar.value);
+      if (!punto) {
+        avisar('No se reconocieron coordenadas. Ejemplo valido: -15.4997, -70.1330', 'erroneo');
+        return;
+      }
+      mapa.fijarSeleccion(punto.lat, punto.lng, 18);
+      avisar(`Punto colocado en ${punto.lat}, ${punto.lng}. Revise el mapa y guarde.`, 'correcto');
+    }
+
+    document.getElementById('usarGoogle').addEventListener('click', usarPegado);
+    pegar.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); usarPegado(); }
+    });
+    // Pegar con el raton tambien coloca el punto, sin tener que pulsar "Usar"
+    pegar.addEventListener('paste', () => setTimeout(usarPegado, 0));
+    pegar.addEventListener('input', () => {
+      if (!pegar.value.trim()) avisar(AYUDA_ORIGINAL);
+    });
+
+    campoZona.addEventListener('change', () => {
+      const zona = ZONAS.find(z => String(z.id) === campoZona.value);
+      if (zona) mapa.fijarSeleccion(parseFloat(zona.latitud), parseFloat(zona.longitud), 15);
+    });
+
+    document.getElementById('btnGps').addEventListener('click', () => {
+      if (!navigator.geolocation) return alert('Su navegador no permite geolocalizacion.');
+      navigator.geolocation.getCurrentPosition(
+        pos => mapa.fijarSeleccion(pos.coords.latitude, pos.coords.longitude, 17),
+        () => alert('No se pudo obtener la ubicacion. Otorgue el permiso al navegador.')
+      );
+    });
+
+    // ---- Buscador de direcciones ----
+    const entrada = document.getElementById('buscarDireccion');
+    const lista = document.getElementById('resultadosDireccion');
+    const cargando = document.getElementById('cargandoDireccion');
+
+    function ocultar() { lista.classList.add('d-none'); lista.innerHTML = ''; }
+
+    entrada.addEventListener('input', () => {
+      if (entrada.value.trim().length < 3) return ocultar();
+      cargando.classList.remove('d-none');
+      geocodificador.buscar(entrada.value)
+        .then(lugares => {
+          lista.innerHTML = '';
+          if (!lugares.length) {
+            lista.innerHTML = '<li class="vacio">Sin resultados para esa direccion.</li>';
+          } else {
+            lugares.forEach(lugar => {
+              const item = document.createElement('li');
+              item.innerHTML = `${lugar.direccion}
+                <span class="coordenadas">${lugar.latitud}, ${lugar.longitud}</span>`;
+              item.addEventListener('click', () => {
+                mapa.fijarSeleccion(lugar.latitud, lugar.longitud, 17);
+                campoRef.value = lugar.direccion;
+                entrada.value = lugar.direccion;
+                ocultar();
+              });
+              lista.appendChild(item);
+            });
+          }
+          lista.classList.remove('d-none');
+        })
+        .catch(() => {
+          lista.innerHTML = '<li class="vacio">No se pudo buscar la direccion.</li>';
+          lista.classList.remove('d-none');
+        })
+        .finally(() => cargando.classList.add('d-none'));
+    });
+
+    entrada.addEventListener('keydown', e => {
+      if (e.key === 'Enter') e.preventDefault();
+      if (e.key === 'Escape') ocultar();
+    });
+    document.addEventListener('click', e => {
+      if (!lista.contains(e.target) && e.target !== entrada) ocultar();
+    });
+  }).catch(e => console.error('No se pudo crear el mapa:', e));
+</script>
+{% endblock %}

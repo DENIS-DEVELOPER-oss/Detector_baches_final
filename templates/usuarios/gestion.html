@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block titulo %}Gestion de usuarios{% endblock %}
+{% block ruta %}Gestion de usuarios{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>Gestion de usuarios</h1>
+    <p class="subtitulo">Administradores y ciudadanos registrados en el sistema</p>
+  </div>
+  <a href="{% url 'admin:usuarios_usuario_add' %}" class="btn btn-primary fw-semibold">
+    <i class="bi bi-person-plus"></i> Crear usuario
+  </a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-4">
+    <div class="kpi kpi-acento">
+      <i class="bi bi-people kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ total_ciudadanos }}</div>
+        <div class="kpi-etiqueta">Ciudadanos</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-4">
+    <div class="kpi">
+      <i class="bi bi-shield-lock kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ total_admins }}</div>
+        <div class="kpi-etiqueta">Administradores</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-xl-4">
+    <div class="kpi kpi-exito">
+      <i class="bi bi-person-check kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ total_activos }}</div>
+        <div class="kpi-etiqueta">Cuentas activas</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tarjeta mb-3">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Filtros</h2>
+    <a href="{% url 'usuarios:gestion' %}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+  </div>
+  <form method="get" class="tarjeta-cuerpo">
+    <div class="row g-2 align-items-end">
+      {% for campo in filtro %}
+        <div class="col-12 col-md">
+          <label class="form-label">{{ campo.label }}</label>
+          {{ campo }}
+        </div>
+      {% endfor %}
+      <div class="col-12 col-md-auto">
+        <button class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Filtrar</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="tarjeta">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Usuarios</h2>
+    <span class="badge bg-acento">{{ page_obj.paginator.count|default:usuarios|length }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover tabla-compacta align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Usuario</th><th>Correo</th><th>Ciudad</th><th>Rol</th>
+          <th class="text-center">Analisis</th><th class="text-center">Danos</th>
+          <th>Estado</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for u in usuarios %}
+        <tr>
+          <td>
+            <div class="persona">
+              {% if u.foto %}
+                <img src="{{ u.foto.url }}" class="rounded-circle" width="34" height="34" style="object-fit:cover" alt="">
+              {% else %}
+                <span class="inicial">{{ u.nombre_para_mostrar|slice:":1"|upper }}</span>
+              {% endif %}
+              <div>
+                <div class="fw-semibold">{{ u.nombre_para_mostrar }}</div>
+                <div class="text-muted small">{{ u.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="small text-muted">{{ u.email|default:"-" }}</td>
+          <td class="small text-muted">{{ u.get_ciudad_display }}</td>
+          <td>
+            <span class="badge {% if u.es_admin %}text-bg-dark{% else %}bg-acento{% endif %}">
+              {{ u.get_rol_display }}
+            </span>
+          </td>
+          <td class="text-center">{{ u.total_analisis }}</td>
+          <td class="text-center"><span class="badge text-bg-danger">{{ u.total_danos|default:0 }}</span></td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge text-bg-success">Activa</span>
+            {% else %}
+              <span class="badge text-bg-secondary">Inactiva</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'usuarios:editar' u.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="text-muted small p-3">No se encontraron usuarios.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}
+<nav class="mt-4">
+  <ul class="pagination justify-content-center">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a></li>
+    {% endif %}
+    <li class="page-item active"><span class="page-link">{{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Siguiente</a></li>
+    {% endif %}
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block titulo %}Dashboard{% endblock %}
+{% block ruta %}Dashboard{% endblock %}
+
+{% block css %}{% include "includes/_mapas_css.html" %}{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>Dashboard de detecciones</h1>
+    <p class="subtitulo">
+      {% if es_admin %}Todo el sistema{% else %}Sus propias detecciones{% endif %}
+      &middot; clasificacion automatica por severidad
+    </p>
+  </div>
+  <a href="{% url 'deteccion:modulo' %}" class="btn btn-primary fw-semibold">
+    <i class="bi bi-cpu"></i> Nueva deteccion
+  </a>
+</div>
+
+<!-- ===================== Totales ===================== -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'analisis:historial' %}" class="kpi kpi-acento">
+      <i class="bi bi-cone-striped kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ total_baches|intcomma }}</div>
+        <div class="kpi-etiqueta">Baches detectados</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="kpi">
+      <i class="bi bi-bezier2 kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ total_grietas|intcomma }}</div>
+        <div class="kpi-etiqueta">Grietas detectadas</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="kpi">
+      <i class="bi bi-collection kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ total_analisis|intcomma }}</div>
+        <div class="kpi-etiqueta">Analisis realizados</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="kpi">
+      <i class="bi bi-cpu kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ confianza }}%</div>
+        <div class="kpi-etiqueta">Confianza media del modelo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Severidad ===================== -->
+<div class="row g-3 mb-3">
+  {% for d in desglose %}
+  <div class="col-6 col-xl-3">
+    <a href="{% url 'analisis:historial' %}?severidad={{ d.nivel }}" class="kpi kpi-sev-{{ d.nivel|lower }}">
+      <i class="bi {% if d.nivel == 'CRITICA' %}bi-exclamation-octagon{% elif d.nivel == 'ALTA' %}bi-exclamation-triangle{% elif d.nivel == 'MEDIA' %}bi-dash-circle{% else %}bi-check-circle{% endif %} kpi-icono"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ d.total|intcomma }}</div>
+        <div class="kpi-etiqueta">Severidad {{ d.etiqueta }} &middot; {{ d.porcentaje }}%</div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="tarjeta h-100">
+      <div class="tarjeta-cabecera">
+        <h2 class="tarjeta-titulo">Distribucion por severidad</h2>
+        <span class="badge bg-acento">{{ total_clasificados|intcomma }} danos</span>
+      </div>
+      <div class="tarjeta-cuerpo">
+        {% if total_clasificados %}
+          <div class="lienzo-grafico alto-bajo"><canvas id="graficoSeveridad"></canvas></div>
+          <div class="mt-3">
+            {% for d in desglose %}
+            <div class="mb-2">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-semibold">
+                  <span class="punto" style="background:{{ d.hex }}"></span> {{ d.etiqueta }}
+                </span>
+                <span class="text-muted small">{{ d.total }} &middot; {{ d.porcentaje }}%</span>
+              </div>
+              <div class="progress barra-progreso">
+                <div class="progress-bar" style="width: {{ d.porcentaje }}%; background: {{ d.hex }}"></div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted small mb-0">Todavia no hay danos clasificados.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-8">
+    <div class="tarjeta h-100">
+      <div class="tarjeta-cabecera">
+        <h2 class="tarjeta-titulo">Evolucion mensual</h2>
+        <span class="badge bg-acento">{{ serie_mensual|length }} mes(es)</span>
+      </div>
+      <div class="tarjeta-cuerpo">
+        <div class="lienzo-grafico alto-medio"><canvas id="graficoMeses"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-0">
+  <div class="col-xl-4">
+    <div class="tarjeta h-100">
+      <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Origen de los analisis</h2></div>
+      <div class="tarjeta-cuerpo">
+        {% for o in por_origen %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="fw-semibold">{{ o.etiqueta }}</span>
+              <span class="text-muted small">{{ o.total }} analisis &middot; {{ o.danos }} danos</span>
+            </div>
+            <div class="progress barra-progreso">
+              <div class="progress-bar" style="width: {% widthratio o.total total_analisis 100 %}%"></div>
+            </div>
+          </div>
+        {% empty %}
+          <p class="text-muted small mb-0">Aun no ha realizado ningun analisis.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="tarjeta h-100">
+      <div class="tarjeta-cabecera">
+        <h2 class="tarjeta-titulo">Zonas mas danadas</h2>
+        <a href="{% url 'analisis:mapa' %}" class="btn-icono" title="Ver en el mapa">
+          <i class="bi bi-geo-alt"></i>
+        </a>
+      </div>
+      <div class="tarjeta-cuerpo p-0">
+        {% if ranking_zonas %}
+          <table class="table tabla-compacta mb-0">
+            <tbody>
+            {% for zona in ranking_zonas %}
+              <tr>
+                <td>
+                  <div class="persona">
+                    <span class="inicial">{{ zona.nombre|slice:":1"|upper }}</span>
+                    <div>
+                      <div class="fw-semibold">{{ zona.nombre|truncatechars:24 }}</div>
+                      <div class="text-muted small">{{ zona.get_ciudad_display }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-end">
+                  <span class="badge text-bg-danger">{{ zona.danos|default:0 }}</span>
+                  <div class="text-muted small mt-1">{{ zona.total }} analisis</div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-muted small p-3 mb-0">Aun no hay datos por zona.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="tarjeta h-100">
+      <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Resumen del modelo</h2></div>
+      <div class="tarjeta-cuerpo">
+        <table class="table tabla-compacta mb-0">
+          <tr><td class="text-muted">Danos totales</td><td class="text-end fw-semibold">{{ total_danos|intcomma }}</td></tr>
+          <tr><td class="text-muted">Analisis geolocalizados</td><td class="text-end fw-semibold">{{ geolocalizados }}</td></tr>
+          <tr><td class="text-muted">Confianza media</td><td class="text-end fw-semibold">{{ confianza }} %</td></tr>
+          <tr><td class="text-muted">Tiempo medio de analisis</td><td class="text-end fw-semibold">{{ tiempo_medio }} s</td></tr>
+          <tr>
+            <td class="text-muted">Nivel mas frecuente</td>
+            <td class="text-end fw-semibold">
+              <span id="nivelFrecuente">-</span>
+            </td>
+          </tr>
+        </table>
+        <a href="{% url 'deteccion:modulo' %}" class="btn btn-outline-primary w-100 mt-3">
+          <i class="bi bi-plus-lg"></i> Analizar algo nuevo
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== Mapa ===================== -->
+<div class="tarjeta mt-3">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Ubicacion de los baches</h2>
+    <div class="leyenda-severidad">
+      <span><span class="punto" style="background:#ced5dc"></span> Sin danos</span>
+      <span><span class="punto" style="background:#4fc98a"></span> Baja</span>
+      <span><span class="punto" style="background:#f5b544"></span> Media</span>
+      <span><span class="punto" style="background:#f2704f"></span> Alta</span>
+      <span><span class="punto" style="background:#c0392b"></span> Critica</span>
+    </div>
+  </div>
+  <div class="p-2"><div id="mapaPanel" class="mapa-mini" style="height:340px"></div></div>
+</div>
+
+<!-- ===================== Historial ===================== -->
+<div class="tarjeta mt-3">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Historial de detecciones</h2>
+    <a href="{% url 'analisis:historial' %}" class="btn btn-sm btn-outline-primary">Ver todo</a>
+  </div>
+
+  {% if historial %}
+  <div class="table-responsive">
+    <table class="table table-hover tabla-compacta align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Codigo</th><th>Analisis</th><th>Origen</th>
+          <th class="text-center">Baches</th><th class="text-center">Grietas</th>
+          <th>Severidad max.</th>{% if es_admin %}<th>Usuario</th>{% endif %}<th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for a in historial %}
+        <tr class="fila-clic" onclick="location.href='{{ a.get_absolute_url }}'">
+          <td><code class="small text-muted">{{ a.codigo }}</code></td>
+          <td>
+            <div class="persona">
+              <span class="inicial"><i class="bi {{ a.icono_origen }}"></i></span>
+              <div>
+                <div class="fw-semibold">{{ a.titulo|truncatechars:34 }}</div>
+                <div class="text-muted small">{{ a.zona|default:"Sin zona" }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="small text-muted">{{ a.get_origen_display }}</td>
+          <td class="text-center"><span class="badge text-bg-danger">{{ a.total_baches }}</span></td>
+          <td class="text-center"><span class="badge text-bg-warning">{{ a.total_grietas }}</span></td>
+          <td>
+            {% if a.severidad_maxima %}
+              <span class="badge badge-sev text-bg-{{ a.color_severidad }}">{{ a.get_severidad_maxima_display }}</span>
+            {% else %}
+              <span class="badge text-bg-light text-dark">Sin danos</span>
+            {% endif %}
+          </td>
+          {% if es_admin %}<td class="small text-muted">{{ a.usuario.nombre_para_mostrar }}</td>{% endif %}
+          <td class="small text-muted">{{ a.creado_en|date:"d/m/Y H:i" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="tarjeta-cuerpo text-center py-5">
+      <i class="bi bi-radar text-secondary" style="font-size:2.4rem"></i>
+      <p class="text-muted small mt-2 mb-3">Todavia no ha realizado ninguna deteccion.</p>
+      <a href="{% url 'deteccion:modulo' %}" class="btn btn-primary fw-semibold">Abrir el modulo de deteccion</a>
+    </div>
+  {% endif %}
+</div>
+
+{{ desglose|json_script:"datos-severidad" }}
+{{ serie_mensual|json_script:"datos-mes" }}
+{% endblock %}
+
+{% block js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+{% include "includes/_mapas_js.html" %}
+<script>
+  const leer = (id) => JSON.parse(document.getElementById(id).textContent);
+
+  Chart.defaults.font.family = '"Segoe UI", Roboto, system-ui, sans-serif';
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = '#98a0ac';
+
+  // Se reemplaza la caja completa, no solo el canvas: si no, quedaria un hueco
+  // con la altura reservada para el grafico.
+  function vacio(canvasId) {
+    const lienzo = document.getElementById(canvasId);
+    if (!lienzo) return;
+    const caja = lienzo.closest('.lienzo-grafico') || lienzo;
+    caja.replaceWith(Object.assign(document.createElement('p'),
+      { className: 'text-muted small mb-0', textContent: 'Sin datos para mostrar.' }));
+  }
+
+  // -------- Distribucion por severidad --------
+  const severidad = leer('datos-severidad').filter(d => d.total > 0);
+  if (severidad.length) {
+    new Chart(document.getElementById('graficoSeveridad'), {
+      type: 'doughnut',
+      data: {
+        labels: severidad.map(d => d.etiqueta),
+        datasets: [{
+          data: severidad.map(d => d.total),
+          backgroundColor: severidad.map(d => d.hex),
+          borderWidth: 0, hoverOffset: 6
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        cutout: '64%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, padding: 12 } },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${ctx.parsed} (${severidad[ctx.dataIndex].porcentaje}%)`
+            }
+          }
+        }
+      }
+    });
+
+    const frecuente = severidad.reduce((a, b) => (b.total > a.total ? b : a));
+    const celda = document.getElementById('nivelFrecuente');
+    if (celda) celda.textContent = `${frecuente.etiqueta} (${frecuente.porcentaje}%)`;
+  }
+
+  // -------- Evolucion mensual --------
+  const meses = leer('datos-mes');
+  const lienzoMeses = document.getElementById('graficoMeses');
+  if (!meses.length) {
+    vacio('graficoMeses');
+  } else {
+    const ctx = lienzoMeses.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, 0, 280);
+    grad.addColorStop(0, 'rgba(46,200,221,.35)');
+    grad.addColorStop(1, 'rgba(46,200,221,0)');
+    const gradRojo = ctx.createLinearGradient(0, 0, 0, 280);
+    gradRojo.addColorStop(0, 'rgba(242,112,79,.28)');
+    gradRojo.addColorStop(1, 'rgba(242,112,79,0)');
+
+    new Chart(lienzoMeses, {
+      type: 'line',
+      data: {
+        labels: meses.map(m => m.mes),
+        datasets: [
+          { label: 'Analisis', data: meses.map(m => m.total), borderColor: '#2ec8dd',
+            backgroundColor: grad, fill: true, tension: .38, borderWidth: 2,
+            pointBackgroundColor: '#fff', pointBorderColor: '#2ec8dd', pointBorderWidth: 2, pointRadius: 4 },
+          { label: 'Danos detectados', data: meses.map(m => m.danos), borderColor: '#f2704f',
+            backgroundColor: gradRojo, fill: true, tension: .38, borderWidth: 2,
+            pointBackgroundColor: '#fff', pointBorderColor: '#f2704f', pointBorderWidth: 2, pointRadius: 4 }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef1f4' }, border: { display: false } },
+          x: { grid: { display: false }, border: { display: false } }
+        },
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, padding: 14 } } }
+      }
+    });
+  }
+
+  // -------- Mapa --------
+  // Centro y zoom salen de CONFIG_MAPAS (JSON), nunca interpolados.
+  crearMapa({ contenedor: 'mapaPanel' }).then(mapa => {
+    fetch('{% url "analisis:geojson" %}')
+      .then(r => r.json())
+      .then(datos => {
+        const total = mapa.cargarGeoJSON(datos);
+        mapa.agrupar();
+        if (total) mapa.ajustarVista();
+      })
+      .catch(() => {});
+  }).catch(e => console.error('No se pudo crear el mapa:', e));
+</script>
+{% endblock %}

@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% load static %}
+{% block titulo %}Modulo de deteccion{% endblock %}
+{% block ruta %}Modulo de deteccion{% endblock %}
+
+{% block css %}{% include "includes/_mapas_css.html" %}{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>Modulo de deteccion</h1>
+    <p class="subtitulo">
+      Elija como alimentar al modelo. Cada dano encontrado se clasifica
+      automaticamente en Baja, Media, Alta o Critica.
+    </p>
+  </div>
+  <a href="{% url 'analisis:historial' %}" class="btn btn-outline-primary">
+    <i class="bi bi-clock-history"></i> Ver mis detecciones
+  </a>
+</div>
+
+<!-- ===================== Selector de modo ===================== -->
+<div class="row g-3 mb-3" id="selectorModos">
+  <div class="col-6 col-lg">
+    <button class="modo" data-modo="imagen" type="button">
+      <i class="bi bi-image"></i>
+      <span class="modo-titulo">Subir imagen</span>
+      <span class="modo-detalle">JPG, PNG, WEBP</span>
+    </button>
+  </div>
+  <div class="col-6 col-lg">
+    <button class="modo" data-modo="video" type="button">
+      <i class="bi bi-film"></i>
+      <span class="modo-titulo">Subir video</span>
+      <span class="modo-detalle">MP4, WEBM, AVI</span>
+    </button>
+  </div>
+  <div class="col-6 col-lg">
+    <button class="modo" data-modo="foto" type="button">
+      <i class="bi bi-camera"></i>
+      <span class="modo-titulo">Tomar foto</span>
+      <span class="modo-detalle">Con la camara</span>
+    </button>
+  </div>
+  <div class="col-6 col-lg">
+    <button class="modo" data-modo="grabar" type="button">
+      <i class="bi bi-record-circle"></i>
+      <span class="modo-titulo">Grabar video</span>
+      <span class="modo-detalle">Con la camara</span>
+    </button>
+  </div>
+  <div class="col-12 col-lg">
+    <button class="modo" data-modo="vivo" type="button">
+      <i class="bi bi-broadcast"></i>
+      <span class="modo-titulo">Deteccion en vivo</span>
+      <span class="modo-detalle">Analisis continuo</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===================== 1 y 2. Subir archivo ===================== -->
+<section class="panel-modo" data-panel="imagen video">
+  <form method="post" action="{% url 'deteccion:subir_archivo' %}" enctype="multipart/form-data"
+        id="formArchivo" novalidate>
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-xl-7">
+        <div class="tarjeta h-100">
+          <div class="tarjeta-cabecera">
+            <h2 class="tarjeta-titulo"><span data-etiqueta-archivo>Imagen o video</span> a analizar</h2>
+          </div>
+          <div class="tarjeta-cuerpo">
+            <label class="zona-soltar" id="zonaSoltar">
+              <i class="bi bi-cloud-arrow-up"></i>
+              <span class="fw-semibold">Arrastre el archivo aqui o haga clic para elegirlo</span>
+              <span class="text-muted small">Imagenes JPG/PNG/WEBP &middot; Videos MP4/WEBM/AVI &middot; Maximo 100 MB</span>
+              {{ form_archivo.archivo }}
+            </label>
+            {% for error in form_archivo.archivo.errors %}<div class="text-danger small mt-2">{{ error }}</div>{% endfor %}
+            <div id="previaArchivo" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-5">
+        <div class="tarjeta h-100">
+          <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Contexto (opcional)</h2></div>
+          <div class="tarjeta-cuerpo">
+            {% include "deteccion/_campos_contexto.html" with form=form_archivo prefijo="" %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta mt-3">
+      <div class="tarjeta-cuerpo d-flex flex-wrap align-items-center gap-3">
+        <button class="btn btn-primary fw-semibold" type="submit" data-boton-envio>
+          <i class="bi bi-cpu"></i> Analizar con YOLO
+        </button>
+        <span class="form-text small mb-0">
+          El analisis de un video puede tardar varios segundos segun su duracion.
+        </span>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- ===================== 3. Tomar foto ===================== -->
+<section class="panel-modo" data-panel="foto">
+  <form method="post" action="{% url 'deteccion:capturar_foto' %}" id="formFoto" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="captura" id="campoCaptura">
+    <div class="row g-3">
+      <div class="col-xl-7">
+        <div class="tarjeta h-100">
+          <div class="tarjeta-cabecera">
+            <h2 class="tarjeta-titulo">Camara</h2>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-primary" type="button" data-camara-iniciar="foto">
+                <i class="bi bi-play-fill"></i> Iniciar
+              </button>
+              <button class="btn btn-sm btn-outline-danger" type="button" data-camara-detener="foto" disabled>
+                <i class="bi bi-stop-fill"></i> Detener
+              </button>
+            </div>
+          </div>
+          <div class="p-2">
+            <div class="envoltura-camara">
+              <video id="videoFoto" playsinline muted autoplay></video>
+              <img id="previaFoto" class="previa-congelada d-none" alt="Foto capturada">
+            </div>
+          </div>
+          <div class="tarjeta-cuerpo pt-0 d-flex flex-wrap gap-2 align-items-center">
+            <button class="btn btn-primary" type="button" id="btnTomarFoto" disabled>
+              <i class="bi bi-camera"></i> Tomar fotografia
+            </button>
+            <button class="btn btn-outline-secondary d-none" type="button" id="btnRepetirFoto">
+              <i class="bi bi-arrow-counterclockwise"></i> Repetir
+            </button>
+            <span class="small text-muted" data-estado="foto">Camara detenida</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-5">
+        <div class="tarjeta h-100">
+          <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Contexto (opcional)</h2></div>
+          <div class="tarjeta-cuerpo">
+            {% include "deteccion/_campos_contexto.html" with form=form_captura prefijo="foto" %}
+            <button class="btn btn-primary w-100 fw-semibold mt-3" type="submit" id="btnGuardarFoto" disabled
+                    data-boton-envio>
+              <i class="bi bi-cpu"></i> Analizar fotografia
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- ===================== 4. Grabar video ===================== -->
+<section class="panel-modo" data-panel="grabar">
+  <form method="post" action="{% url 'deteccion:grabar_video' %}" enctype="multipart/form-data"
+        id="formGrabar" novalidate>
+    {% csrf_token %}
+    <div class="row g-3">
+      <div class="col-xl-7">
+        <div class="tarjeta h-100">
+          <div class="tarjeta-cabecera">
+            <h2 class="tarjeta-titulo">Camara</h2>
+            <div class="d-flex gap-2 align-items-center">
+              <span class="indicador-grabacion d-none" id="indicadorRec">
+                <span class="punto-rec"></span> <span id="cronometro">00:00</span>
+              </span>
+              <button class="btn btn-sm btn-primary" type="button" data-camara-iniciar="grabar">
+                <i class="bi bi-play-fill"></i> Iniciar
+              </button>
+              <button class="btn btn-sm btn-outline-danger" type="button" data-camara-detener="grabar" disabled>
+                <i class="bi bi-stop-fill"></i> Detener
+              </button>
+            </div>
+          </div>
+          <div class="p-2">
+            <div class="envoltura-camara">
+              <video id="videoGrabar" playsinline muted autoplay></video>
+              <video id="previaGrabacion" class="previa-congelada d-none" controls></video>
+            </div>
+          </div>
+          <div class="tarjeta-cuerpo pt-0 d-flex flex-wrap gap-2 align-items-center">
+            <button class="btn btn-danger" type="button" id="btnGrabar" disabled>
+              <i class="bi bi-record-circle"></i> Grabar
+            </button>
+            <button class="btn btn-outline-secondary d-none" type="button" id="btnDescartarGrabacion">
+              <i class="bi bi-arrow-counterclockwise"></i> Descartar
+            </button>
+            <span class="small text-muted" data-estado="grabar">Camara detenida</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-xl-5">
+        <div class="tarjeta h-100">
+          <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Contexto (opcional)</h2></div>
+          <div class="tarjeta-cuerpo">
+            {% include "deteccion/_campos_contexto.html" with form=form_grabacion prefijo="video" %}
+            <button class="btn btn-primary w-100 fw-semibold mt-3" type="submit" id="btnGuardarGrabacion" disabled
+                    data-boton-envio>
+              <i class="bi bi-cpu"></i> Analizar grabacion
+            </button>
+            <div class="form-text small">
+              La grabacion se envia al servidor y se analiza cuadro por cuadro.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</section>
+
+<!-- ===================== 5. Deteccion en vivo ===================== -->
+<section class="panel-modo" data-panel="vivo">
+  <div class="row g-3">
+    <div class="col-xl-8">
+      <div class="tarjeta">
+        <div class="tarjeta-cabecera">
+          <h2 class="tarjeta-titulo">Transmision en vivo</h2>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-primary" type="button" data-camara-iniciar="vivo">
+              <i class="bi bi-play-fill"></i> Iniciar
+            </button>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-camara-detener="vivo" disabled>
+              <i class="bi bi-stop-fill"></i> Detener
+            </button>
+          </div>
+        </div>
+        <div class="p-2">
+          <div class="envoltura-camara">
+            <video id="videoVivo" playsinline muted autoplay></video>
+            <canvas id="lienzoVivo"></canvas>
+          </div>
+        </div>
+        <div class="tarjeta-cuerpo pt-2">
+          <div class="row g-2 text-center mb-2">
+            <div class="col-3">
+              <div class="contador-vivo" style="border-color:#4fc98a">
+                <div class="valor" id="vivoBaja">0</div><div class="etq">Baja</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="contador-vivo" style="border-color:#f5b544">
+                <div class="valor" id="vivoMedia">0</div><div class="etq">Media</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="contador-vivo" style="border-color:#f2704f">
+                <div class="valor" id="vivoAlta">0</div><div class="etq">Alta</div>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="contador-vivo" style="border-color:#c0392b">
+                <div class="valor" id="vivoCritica">0</div><div class="etq">Critica</div>
+              </div>
+            </div>
+          </div>
+          <div class="small text-muted" data-estado="vivo">Camara detenida</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4">
+      <div class="tarjeta">
+        <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Ajustes</h2></div>
+        <div class="tarjeta-cuerpo">
+          <label class="form-label">Camara</label>
+          <select class="form-select mb-3" id="selectCamara"></select>
+
+          <label class="form-label">Analisis por segundo: <span class="text-acento fw-bold" id="valorFps">2</span></label>
+          <input type="range" class="form-range mb-3" id="rangoFps" min="1" max="6" value="2">
+
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="chkEspejo">
+            <label class="form-check-label small" for="chkEspejo">Invertir imagen (camara frontal)</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="tarjeta mt-3">
+        <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Guardar el cuadro actual</h2></div>
+        <form method="post" action="{% url 'deteccion:guardar_vivo' %}" id="formVivo" class="tarjeta-cuerpo">
+          {% csrf_token %}
+          <input type="hidden" name="captura" id="campoCapturaVivo">
+          {% include "deteccion/_campos_contexto.html" with form=form_vivo prefijo="vivo" %}
+          <button class="btn btn-primary w-100 fw-semibold mt-3" type="submit" id="btnGuardarVivo" disabled
+                  data-boton-envio>
+            <i class="bi bi-save"></i> Guardar deteccion
+          </button>
+          <div class="form-text small">Congela el cuadro actual y lo registra en su historial.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== Mapa compartido ===================== -->
+<div class="tarjeta mt-3">
+  <div class="tarjeta-cabecera">
+    <h2 class="tarjeta-titulo">Georreferenciacion (se aplica al modo activo)</h2>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="btnGps">
+      <i class="bi bi-crosshair"></i> Usar mi ubicacion
+    </button>
+  </div>
+
+  <div class="tarjeta-cuerpo pb-2">
+    <label class="form-label">Buscar una direccion</label>
+    <div class="buscador-direccion">
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" id="buscarDireccion" autocomplete="off"
+               placeholder="Ej. Av. Circunvalacion, Juliaca">
+        <span class="input-group-text d-none" id="cargandoDireccion">
+          <span class="spinner-border spinner-border-sm"></span>
+        </span>
+      </div>
+      <ul class="resultados-direccion d-none" id="resultadosDireccion"></ul>
+    </div>
+    <div class="form-text small">
+      Busqueda con OpenStreetMap. Al marcar un punto se completa la referencia automaticamente.
+    </div>
+
+    <!-- ---- Puente con Google Maps ---- -->
+    <div class="puente-google mt-3">
+      <div class="puente-google-cabecera">
+        <span><i class="bi bi-geo-alt-fill"></i> Elegir el punto en Google Maps</span>
+        <a href="#" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"
+           id="abrirGoogle">
+          <i class="bi bi-box-arrow-up-right"></i> Abrir Google Maps
+        </a>
+      </div>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-clipboard"></i></span>
+        <input type="text" class="form-control" id="pegarGoogle" autocomplete="off"
+               placeholder="Pegue aqui las coordenadas o el enlace de Google Maps">
+        <button class="btn btn-primary" type="button" id="usarGoogle">Usar</button>
+      </div>
+      <div class="form-text small mb-0" id="ayudaGoogle">
+        En Google Maps, haga clic derecho sobre el punto y elija las coordenadas para
+        copiarlas; tambien sirve pegar el enlace de la barra de direcciones.
+      </div>
+    </div>
+  </div>
+
+  <div class="p-2 pt-0"><div id="mapa" class="mapa-mini"></div></div>
+
+  <div class="tarjeta-cuerpo pt-2">
+    <div class="form-text small mb-0">
+      Tambien puede elegir una zona, hacer clic sobre el mapa o arrastrar el marcador.
+      Las coordenadas se copian al formulario del modo que tenga abierto.
+    </div>
+  </div>
+</div>
+
+{{ zonas_json|json_script:"zonas-json" }}
+<span id="modo-inicial" data-modo="{{ modo_inicial }}"></span>
+{% endblock %}
+
+{% block js %}
+{% include "includes/_mapas_js.html" %}
+<script src="{% static 'js/modulo_deteccion.js' %}"></script>
+<script>
+  // El centro y el zoom los toma crearMapa() de CONFIG_MAPAS (JSON del servidor):
+  // interpolarlos aqui los escribiria con coma decimal por el locale es-PE.
+  iniciarModuloDeteccion({
+    zonas: JSON.parse(document.getElementById('zonas-json').textContent),
+    modoInicial: document.getElementById('modo-inicial').dataset.modo,
+    urlAnalizar: '{% url "deteccion:analizar_cuadro" %}',
+    csrf: document.querySelector('[name=csrfmiddlewaretoken]').value
+  });
+</script>
+{% endblock %}

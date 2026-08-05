@@ -1,0 +1,92 @@
+{% extends "base_acceso.html" %}
+{% block titulo %}Iniciar sesion{% endblock %}
+
+{% block contenido %}
+<h2 class="acceso-titulo">Iniciar sesion</h2>
+<p class="acceso-ayuda">Ingrese con la cuenta que le asigno el administrador.</p>
+
+{% if form.non_field_errors %}
+  <div class="alert alert-danger d-flex gap-2 py-2 small" role="alert">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <div>{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
+  </div>
+{% endif %}
+
+<form method="post" novalidate id="formAcceso">
+  {% csrf_token %}
+
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+    <div class="campo-icono">
+      <i class="bi bi-person"></i>
+      {{ form.username }}
+    </div>
+    {% for error in form.username.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+    <div class="campo-icono">
+      <i class="bi bi-lock"></i>
+      {{ form.password }}
+      <button type="button" class="ver-clave" id="verClave"
+              aria-label="Mostrar u ocultar la contrasena" title="Mostrar contrasena">
+        <i class="bi bi-eye" id="iconoClave"></i>
+      </button>
+    </div>
+    {% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+    <div class="aviso-mayusculas d-none" id="avisoMayusculas">
+      <i class="bi bi-info-circle"></i> El bloqueo de mayusculas esta activado.
+    </div>
+  </div>
+
+  <div class="form-check mb-4">
+    {{ form.recordarme }}
+    <label class="form-check-label small" for="{{ form.recordarme.id_for_label }}">
+      {{ form.recordarme.label }}
+    </label>
+  </div>
+
+  <button class="btn btn-primary w-100 fw-semibold py-2" type="submit" id="btnAcceso">
+    <i class="bi bi-box-arrow-in-right me-1"></i> Entrar al sistema
+  </button>
+</form>
+
+<div class="acceso-nota">
+  <i class="bi bi-info-circle"></i>
+  El sistema no admite registro publico. Si necesita una cuenta,
+  solicitela al administrador.
+</div>
+{% endblock %}
+
+{% block js %}
+<script>
+  // Mostrar u ocultar la contrasena
+  const campoClave = document.getElementById('{{ form.password.id_for_label }}');
+  const boton = document.getElementById('verClave');
+  const icono = document.getElementById('iconoClave');
+
+  boton.addEventListener('click', () => {
+    const oculta = campoClave.type === 'password';
+    campoClave.type = oculta ? 'text' : 'password';
+    icono.className = oculta ? 'bi bi-eye-slash' : 'bi bi-eye';
+    boton.title = oculta ? 'Ocultar contrasena' : 'Mostrar contrasena';
+    campoClave.focus();
+  });
+
+  // Aviso de bloqueo de mayusculas: causa habitual de "usuario o contrasena incorrectos"
+  const aviso = document.getElementById('avisoMayusculas');
+  campoClave.addEventListener('keyup', (e) => {
+    const activo = e.getModifierState && e.getModifierState('CapsLock');
+    aviso.classList.toggle('d-none', !activo);
+  });
+  campoClave.addEventListener('blur', () => aviso.classList.add('d-none'));
+
+  // Evita el doble envio
+  document.getElementById('formAcceso').addEventListener('submit', () => {
+    const btn = document.getElementById('btnAcceso');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...';
+  });
+</script>
+{% endblock %}

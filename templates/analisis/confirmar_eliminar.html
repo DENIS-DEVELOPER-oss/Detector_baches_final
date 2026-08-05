@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titulo %}Eliminar analisis{% endblock %}
+{% block ruta %}Eliminar analisis{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="tarjeta">
+      <div class="tarjeta-cuerpo text-center py-5">
+        <i class="bi bi-exclamation-triangle text-danger" style="font-size:2.8rem"></i>
+        <h1 class="h5 mt-3">Eliminar el analisis {{ object.codigo }}?</h1>
+        <p class="text-muted small">
+          Se borraran tambien sus {{ object.total_detecciones }} dano(s) detectado(s).
+          Esta accion no se puede deshacer.
+        </p>
+        <form method="post" class="d-flex gap-2 justify-content-center mt-3">
+          {% csrf_token %}
+          <button class="btn btn-danger fw-semibold" type="submit">Si, eliminar</button>
+          <a class="btn btn-outline-secondary" href="{{ object.get_absolute_url }}">Cancelar</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

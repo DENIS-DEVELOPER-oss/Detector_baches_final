@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block titulo %}{{ analisis.codigo }}{% endblock %}
+{% block ruta %}Detalle del analisis{% endblock %}
+
+{% block css %}{% include "includes/_mapas_css.html" %}{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+      <code class="text-muted">{{ analisis.codigo }}</code>
+      {% if analisis.severidad_maxima %}
+        <span class="badge badge-sev text-bg-{{ analisis.color_severidad }}">
+          Severidad maxima: {{ analisis.get_severidad_maxima_display }}
+        </span>
+      {% else %}
+        <span class="badge text-bg-light text-dark">Sin danos detectados</span>
+      {% endif %}
+      <span class="badge text-bg-dark"><i class="bi {{ analisis.icono_origen }}"></i> {{ analisis.get_origen_display }}</span>
+    </div>
+    <h1>{{ analisis.titulo }}</h1>
+    <p class="subtitulo">
+      <i class="bi bi-geo-alt"></i> {{ analisis.zona|default:"Sin zona asignada" }}
+      {% if analisis.direccion_referencia %} &middot; {{ analisis.direccion_referencia }}{% endif %}
+      &middot; <i class="bi bi-person"></i> {{ analisis.usuario.nombre_para_mostrar }}
+      &middot; {{ analisis.creado_en|date:"d/m/Y H:i" }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if puede_editar %}
+      <form method="post" action="{% url 'analisis:reprocesar' analisis.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-clockwise"></i> Reprocesar</button>
+      </form>
+      <a href="{% url 'analisis:eliminar' analisis.pk %}" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></a>
+    {% endif %}
+    <a href="{% url 'analisis:historial' %}" class="btn btn-outline-secondary btn-sm">Volver</a>
+  </div>
+</div>
+
+{% if analisis.error_proceso %}
+<div class="alert alert-danger"><strong>Error en el analisis:</strong> {{ analisis.error_proceso }}</div>
+{% endif %}
+
+<!-- Tiles de severidad de este analisis -->
+<div class="row g-3 mb-3">
+  {% for d in desglose %}
+  <div class="col-6 col-xl-3">
+    <div class="kpi kpi-sev-{{ d.nivel|lower }} py-3">
+      <i class="bi {% if d.nivel == 'CRITICA' %}bi-exclamation-octagon{% elif d.nivel == 'ALTA' %}bi-exclamation-triangle{% elif d.nivel == 'MEDIA' %}bi-dash-circle{% else %}bi-check-circle{% endif %} kpi-icono" style="font-size:1.7rem"></i>
+      <div class="kpi-datos">
+        <div class="kpi-valor">{{ d.total }}</div>
+        <div class="kpi-etiqueta">{{ d.etiqueta }} &middot; {{ d.porcentaje }}%</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="tarjeta">
+      <div class="tarjeta-cabecera">
+        <h2 class="tarjeta-titulo">Resultado del modelo</h2>
+        <ul class="nav nav-pills" role="tablist">
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabResultado">Detectado</button></li>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabOriginal">Original</button></li>
+        </ul>
+      </div>
+      <div class="tarjeta-cuerpo">
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="tabResultado">
+            {% if analisis.archivo_resultado %}
+              {% if analisis.es_video %}
+                <video class="media-resultado" controls preload="metadata"
+                       src="{{ analisis.archivo_resultado.url }}"
+                       {% if analisis.miniatura %}poster="{{ analisis.miniatura.url }}"{% endif %}></video>
+                <div class="aviso-video d-none" id="avisoVideo">
+                  <i class="bi bi-exclamation-triangle"></i>
+                  Su navegador no puede reproducir este video.
+                  <a href="{{ analisis.archivo_resultado.url }}" download>Descarguelo</a>
+                  para verlo, o pida al administrador que ejecute
+                  <code>manage.py recodificar_videos</code>.
+                </div>
+              {% else %}
+                <img class="media-resultado" src="{{ analisis.archivo_resultado.url }}" alt="Resultado">
+              {% endif %}
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+                <div class="leyenda-severidad">
+                  <span><span class="punto" style="background:#4fc98a"></span> Baja</span>
+                  <span><span class="punto" style="background:#f5b544"></span> Media</span>
+                  <span><span class="punto" style="background:#f2704f"></span> Alta</span>
+                  <span><span class="punto" style="background:#c0392b"></span> Critica</span>
+                </div>
+                <a href="{{ analisis.archivo_resultado.url }}" download
+                   class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-download"></i> Descargar resultado
+                </a>
+              </div>
+            {% else %}
+              <p class="text-muted small mb-0">Este analisis aun no tiene un archivo procesado.</p>
+            {% endif %}
+          </div>
+          <div class="tab-pane fade" id="tabOriginal">
+            {% if analisis.es_video %}
+              <video class="media-resultado" controls src="{{ analisis.archivo.url }}"></video>
+            {% else %}
+              <img class="media-resultado" src="{{ analisis.archivo.url }}" alt="Original">
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if analisis.descripcion %}
+    <div class="tarjeta mt-3">
+      <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Descripcion</h2></div>
+      <div class="tarjeta-cuerpo"><p class="mb-0">{{ analisis.descripcion|linebreaksbr }}</p></div>
+    </div>
+    {% endif %}
+
+    <div class="tarjeta mt-3">
+      <div class="tarjeta-cabecera">
+        <h2 class="tarjeta-titulo">Danos detectados y su clasificacion</h2>
+        <span class="badge bg-acento">{{ analisis.total_detecciones }}</span>
+      </div>
+      {% if baches %}
+      <div class="table-responsive" style="max-height:400px">
+        <table class="table tabla-compacta mb-0">
+          <thead class="sticky-top">
+            <tr>
+              <th>#</th><th>Tipo</th><th>Severidad</th><th>Confianza</th>
+              <th>Area del cuadro</th>{% if analisis.es_video %}<th>Segundo</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+          {% for b in baches %}
+            <tr>
+              <td class="text-muted">{{ forloop.counter }}</td>
+              <td>
+                <span class="badge {% if b.clase == 'pothole' %}text-bg-danger{% else %}text-bg-warning{% endif %}">
+                  {{ b.get_clase_display }}
+                </span>
+              </td>
+              <td><span class="badge badge-sev text-bg-{{ b.color_severidad }}">{{ b.get_severidad_display }}</span></td>
+              <td style="min-width:140px">
+                <div class="progress barra-progreso">
+                  <div class="progress-bar" style="width: {{ b.confianza_pct }}%"></div>
+                </div>
+                <span class="small text-muted">{{ b.confianza_pct }}%</span>
+              </td>
+              <td class="small">{{ b.area_pct }} %</td>
+              {% if analisis.es_video %}<td class="small">{{ b.segundo|floatformat:1 }} s</td>{% endif %}
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="tarjeta-cuerpo">
+          <p class="text-muted small mb-0">El modelo no encontro danos viales en este archivo.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="tarjeta">
+      <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Resumen</h2></div>
+      <div class="tarjeta-cuerpo">
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="kpi kpi-alerta py-3">
+              <i class="bi bi-cone-striped kpi-icono" style="font-size:1.6rem"></i>
+              <div class="kpi-datos">
+                <div class="kpi-valor">{{ analisis.total_baches }}</div>
+                <div class="kpi-etiqueta">Baches</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="kpi py-3">
+              <i class="bi bi-bezier2 kpi-icono" style="font-size:1.6rem"></i>
+              <div class="kpi-datos">
+                <div class="kpi-valor">{{ analisis.total_grietas }}</div>
+                <div class="kpi-etiqueta">Grietas</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <table class="table tabla-compacta mb-0">
+          <tr>
+            <td class="text-muted">Severidad predominante</td>
+            <td class="text-end fw-semibold">{{ analisis.get_severidad_predominante_display|default:"-" }}</td>
+          </tr>
+          <tr><td class="text-muted">Confianza promedio</td><td class="text-end fw-semibold">{{ analisis.confianza_promedio|floatformat:2 }}</td></tr>
+          <tr><td class="text-muted">Area danada</td><td class="text-end fw-semibold">{{ analisis.area_danada_pct }} %</td></tr>
+          <tr><td class="text-muted">Cuadros analizados</td><td class="text-end fw-semibold">{{ analisis.frames_analizados }}</td></tr>
+          <tr><td class="text-muted">Tiempo de proceso</td><td class="text-end fw-semibold">{{ analisis.tiempo_proceso }} s</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="tarjeta mt-3">
+      <div class="tarjeta-cabecera">
+        <h2 class="tarjeta-titulo">Ubicacion</h2>
+        {% if analisis.tiene_ubicacion and puede_editar %}
+          <a href="{% url 'analisis:ubicacion' analisis.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil"></i> Cambiar
+          </a>
+        {% endif %}
+      </div>
+
+      {% if analisis.tiene_ubicacion %}
+        <div class="p-2"><div id="mapaDetalle" class="mapa-mini"></div></div>
+        <div class="tarjeta-cuerpo pt-2">
+          {% if analisis.direccion_referencia %}
+            <div class="small mb-1"><i class="bi bi-signpost text-acento"></i> {{ analisis.direccion_referencia }}</div>
+          {% endif %}
+          <div class="small text-muted mb-2">
+            <i class="bi bi-pin-map"></i> {{ analisis.latitud }}, {{ analisis.longitud }}
+          </div>
+          <a href="#" target="_blank" rel="noopener"
+             class="btn btn-sm btn-outline-secondary w-100" id="verEnGoogle">
+            <i class="bi bi-box-arrow-up-right"></i> Ver en Google Maps
+          </a>
+        </div>
+      {% else %}
+        <div class="tarjeta-cuerpo text-center py-4">
+          <i class="bi bi-geo-alt text-secondary" style="font-size:2.2rem"></i>
+          <p class="text-muted small mt-2 mb-3">
+            Esta foto no esta georreferenciada, asi que no aparece en el mapa de baches.
+          </p>
+          {% if puede_editar %}
+            <a href="{% url 'analisis:ubicacion' analisis.pk %}" class="btn btn-primary fw-semibold">
+              <i class="bi bi-geo-alt-fill"></i> Ubicar en el mapa
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block js %}
+{% if analisis.es_video and analisis.archivo_resultado %}
+<script>
+  // Si el codec no es compatible, el <video> emite 'error' y se ofrece descargar
+  (function () {
+    const video = document.querySelector('video.media-resultado');
+    const aviso = document.getElementById('avisoVideo');
+    if (!video || !aviso) return;
+    video.addEventListener('error', () => aviso.classList.remove('d-none'));
+  })();
+</script>
+{% endif %}
+{% if punto %}
+{% include "includes/_mapas_js.html" %}
+{{ punto|json_script:"punto-analisis" }}
+<script>
+  // El punto viaja como JSON: interpolarlo lo escribiria con coma decimal (es-PE).
+  const punto = JSON.parse(document.getElementById('punto-analisis').textContent);
+
+  crearMapa({ contenedor: 'mapaDetalle', centro: [punto.lat, punto.lng], zoom: 16 })
+    .then(mapa => {
+      mapa.agregarMarcador({
+        lat: punto.lat,
+        lng: punto.lng,
+        color: punto.color,
+        titulo: punto.codigo,
+        html: '<div style="font-weight:600">' + punto.codigo + '</div>'
+              + '<div style="font-size:.8rem">' + punto.titulo + '</div>'
+      });
+      mapa.agrupar();
+    })
+    .catch(e => console.error('No se pudo crear el mapa:', e));
+
+  const enlace = document.getElementById('verEnGoogle');
+  if (enlace) enlace.href = enlaceGoogleMapsPunto(punto.lat, punto.lng);
+</script>
+{% endif %}
+{% endblock %}

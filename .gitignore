@@ -1,0 +1,68 @@
+# ---------------------------------------------------------------------------
+# Secretos y configuracion local
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# ---------------------------------------------------------------------------
+# Django
+# ---------------------------------------------------------------------------
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Archivos subidos por los usuarios y resultados del analisis.
+# No se versionan: los genera la aplicacion y crecen sin limite.
+media/
+
+# Resultado de collectstatic; se regenera en cada despliegue.
+staticfiles/
+
+# ---------------------------------------------------------------------------
+# Modelos de inteligencia artificial
+# ---------------------------------------------------------------------------
+# Los .pt pesan decenas de MB. Solo se versiona el modelo activo (38 MB), para
+# que el proyecto funcione recien clonado sin inflar el repositorio.
+# Los otros dos son variantes de entrenamiento; ver "Modelos" en el README.
+ai_models/*.pt
+!ai_models/detector_baches_v2_bache_grieta.pt
+
+# ---------------------------------------------------------------------------
+# Editores y sistema operativo
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------------
+# Herramientas
+# ---------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
