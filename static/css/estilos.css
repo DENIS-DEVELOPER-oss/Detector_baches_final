@@ -247,6 +247,8 @@ a { text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Sin esto, en pantallas estrechas el titulo y las acciones se aplastan */
+  flex-wrap: wrap;
   gap: .75rem;
   padding: .95rem 1.15rem;
   border-bottom: 1px solid var(--borde);
@@ -935,4 +937,65 @@ a { text-decoration: none; }
   .velo {
     position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 1035;
   }
+
+  /* El mapa a pantalla completa deja poco sitio a los controles */
+  .mapa { height: 58vh; min-height: 360px; }
 }
+
+/* --------------------------------------------------------------------------
+   Telefonos
+   -------------------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+  .contenido { padding: .8rem; }
+  .barra-superior { padding: 0 .8rem; gap: .5rem; }
+  .icono-superior { width: 32px; height: 32px; font-size: .95rem; }
+
+  /* Titulo arriba y botones a lo ancho, en lugar de apretados a la derecha */
+  .encabezado-pagina { align-items: stretch; gap: .6rem; }
+  .encabezado-pagina h1 { font-size: 1.2rem; }
+  .encabezado-pagina > .d-flex,
+  .encabezado-pagina > .btn-group { width: 100%; }
+  .encabezado-pagina > .d-flex > .btn,
+  .encabezado-pagina > .btn-group > .btn { flex: 1 1 0; }
+
+  /* Con dos tarjetas por fila, el tamano original desbordaba */
+  .kpi { padding: .8rem .85rem; gap: .5rem; }
+  .kpi-icono { font-size: 1.5rem; }
+  .kpi-valor { font-size: 1.25rem; }
+  .kpi-etiqueta { font-size: .6rem; letter-spacing: .02em; }
+
+  .mapa { height: 52vh; min-height: 300px; }
+  .mapa-mini { height: 230px; }
+  .media-resultado { max-height: 45vh; }
+
+  .tarjeta-cuerpo { padding: .9rem; }
+  .tarjeta-cabecera { padding: .8rem .9rem; }
+  .encabezado-pagina .subtitulo { font-size: .78rem; }
+
+  /* Los cinco modos, dos por fila y mas compactos */
+  .modo { padding: .8rem .5rem; }
+  .modo .bi { font-size: 1.35rem; }
+  .modo-titulo { font-size: .78rem; }
+  .modo-detalle { font-size: .66rem; }
+
+  .miniatura-reporte, .miniatura-vacia { height: 190px; }
+
+  /* Una cuenta de prueba no cabe en una linea en pantallas estrechas */
+  .cuenta-demo { flex-wrap: wrap; gap: .3rem; }
+  .cuenta-demo-rol { font-size: .6rem; }
+
+  .acceso-autores p { font-size: 1rem; }
+}
+
+/* --------------------------------------------------------------------------
+   Textos largos: direcciones de Nominatim, codigos, nombres de archivo.
+   Sin esto empujan la pagina a lo ancho y aparece scroll horizontal.
+   -------------------------------------------------------------------------- */
+.resultados-direccion li,
+.encabezado-pagina .subtitulo,
+.cuenta-demo-datos,
+.tarjeta-cuerpo code,
+.persona div { overflow-wrap: anywhere; }
+
+/* Ninguna pagina debe desplazarse en horizontal */
+html, body { max-width: 100%; overflow-x: hidden; }

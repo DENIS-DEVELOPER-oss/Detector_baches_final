@@ -7,10 +7,12 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.db.models import Count, Sum
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
-from django.views.generic import ListView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView
 
 from .cuentas_demo import cuentas_para_mostrar
-from .forms import FiltroUsuarioForm, LoginForm, PerfilForm, UsuarioAdminForm
+from .forms import (
+    CrearUsuarioForm, FiltroUsuarioForm, LoginForm, PerfilForm, UsuarioAdminForm,
+)
 from .models import RolUsuario, Usuario
 
 # Duracion de la sesion cuando el usuario marca "mantener sesion iniciada".
@@ -115,6 +117,24 @@ class UsuarioListView(AdminRequeridoMixin, ListView):
         ctx["total_admins"] = Usuario.objects.administradores().count()
         ctx["total_activos"] = Usuario.objects.activos().count()
         return ctx
+
+
+class UsuarioCreateView(AdminRequeridoMixin, CreateView):
+    """Alta de cuentas sin pasar por el panel de Django."""
+
+    model = Usuario
+    form_class = CrearUsuarioForm
+    template_name = "usuarios/crear.html"
+    success_url = reverse_lazy("usuarios:gestion")
+
+    def form_valid(self, form):
+        respuesta = super().form_valid(form)
+        messages.success(
+            self.request,
+            f"Cuenta '{self.object.username}' creada como "
+            f"{self.object.get_rol_display().lower()}.",
+        )
+        return respuesta
 
 
 class UsuarioUpdateView(AdminRequeridoMixin, UpdateView):

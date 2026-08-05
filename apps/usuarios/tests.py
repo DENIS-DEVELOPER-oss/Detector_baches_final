@@ -108,6 +108,62 @@ class AccesoTest(TestCase):
         self.assertGreater(self.client.session.get_expiry_age(), 60 * 60 * 24)
 
 
+class PanelDjangoTest(TestCase):
+    """El panel de Django esta desmontado: la gestion vive en la aplicacion."""
+
+    def test_no_existe_la_url_del_admin(self):
+        for ruta in ("/admin/", "/admin/login/", "/panel-interno/"):
+            with self.subTest(ruta=ruta):
+                self.assertEqual(self.client.get(ruta).status_code, 404)
+
+    def test_ninguna_pagina_enlaza_al_admin(self):
+        admin = Usuario.objects.create_user("jefe", password="x", rol=RolUsuario.ADMIN)
+        self.client.force_login(admin)
+        for nombre in ("analisis:panel", "usuarios:gestion", "usuarios:perfil"):
+            with self.subTest(pagina=nombre):
+                html = self.client.get(reverse(nombre)).content.decode()
+                self.assertNotIn("/admin/", html)
+
+
+class CrearUsuarioTest(TestCase):
+    """Alta de cuentas sin pasar por el panel de Django."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = Usuario.objects.create_user("jefe", password="x", rol=RolUsuario.ADMIN)
+        cls.ciudadano = Usuario.objects.create_user("vecino", password="x")
+
+    def test_el_administrador_crea_una_cuenta(self):
+        self.client.force_login(self.admin)
+        self.client.post(reverse("usuarios:crear"), {
+            "username": "nueva", "first_name": "Ana", "last_name": "Mamani",
+            "email": "ana@x.pe", "dni": "", "telefono": "", "ciudad": "PUNO",
+            "rol": RolUsuario.CIUDADANO,
+            "password1": "Clave-Larga-2026", "password2": "Clave-Larga-2026",
+        })
+        creada = Usuario.objects.filter(username="nueva").first()
+        self.assertIsNotNone(creada)
+        self.assertEqual(creada.rol, RolUsuario.CIUDADANO)
+        self.assertTrue(creada.is_active)
+
+    def test_puede_crear_administradores(self):
+        self.client.force_login(self.admin)
+        self.client.post(reverse("usuarios:crear"), {
+            "username": "otrojefe", "first_name": "", "last_name": "", "email": "",
+            "dni": "", "telefono": "", "ciudad": "JULIACA", "rol": RolUsuario.ADMIN,
+            "password1": "Clave-Larga-2026", "password2": "Clave-Larga-2026",
+        })
+        creada = Usuario.objects.filter(username="otrojefe").first()
+        self.assertIsNotNone(creada)
+        self.assertTrue(creada.es_admin)
+        self.assertTrue(creada.is_staff)
+
+    def test_un_ciudadano_no_puede_crear_cuentas(self):
+        self.client.force_login(self.ciudadano)
+        self.assertEqual(self.client.get(reverse("usuarios:crear")).status_code, 302)
+        self.assertEqual(Usuario.objects.count(), 2)
+
+
 class GestionDeUsuariosTest(TestCase):
     @classmethod
     def setUpTestData(cls):

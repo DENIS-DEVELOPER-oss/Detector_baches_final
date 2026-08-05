@@ -73,13 +73,27 @@ El sistema maneja **exactamente dos roles**:
 
 ### Sin registro público
 
-El sistema **no admite altas públicas**: no existe `/cuentas/registro/` ni formulario de
-creación de cuenta. Las cuentas las crea el administrador desde
-[/cuentas/gestion/](apps/usuarios/views.py) → *Crear usuario*, que lleva al alta del panel
-de Django, y desde ahí se editan rol, ciudad y estado de la cuenta.
+El sistema **no admite altas públicas**: no existe `/cuentas/registro/`. Las cuentas las
+crea el administrador en `/cuentas/gestion/` → **Crear usuario**, eligiendo el rol, y desde
+ahí edita datos, rol y activación.
 
 Es una decisión deliberada: al ser un sistema de detección automática para una entidad
 concreta, no tiene sentido que cualquiera se dé de alta.
+
+### Sin panel de Django
+
+El panel de administración de Django **está desmontado**: `/admin/` devuelve 404 y ninguna
+página enlaza a él. Tiene otro aspecto visual y no hace falta, porque la gestión de
+usuarios vive dentro de la aplicación.
+
+Para una tarea de mantenimiento puntual se puede activar desde el `.env`:
+
+```ini
+ADMIN_DJANGO=True
+ADMIN_DJANGO_URL=panel-interno/     # no lo deje en "admin/"
+```
+
+Conviene volver a `False` al terminar.
 
 ### Pantalla de acceso
 

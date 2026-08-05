@@ -5,7 +5,7 @@ las crea el administrador desde la gestion de usuarios.
 """
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 
 from .models import RolUsuario, Usuario
 
@@ -67,6 +67,40 @@ class PerfilForm(MixinBootstrap, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._estilizar()
+
+
+class CrearUsuarioForm(MixinBootstrap, UserCreationForm):
+    """Alta de una cuenta por parte del administrador.
+
+    Sustituye al formulario del panel de Django: aqui el administrador elige
+    el rol, cosa que el registro publico (inexistente) nunca podria hacer.
+    """
+
+    email = forms.EmailField(label="Correo electronico", required=False)
+
+    class Meta:
+        model = Usuario
+        fields = ["username", "first_name", "last_name", "email",
+                  "dni", "telefono", "ciudad", "rol"]
+        labels = {
+            "username": "Nombre de usuario",
+            "first_name": "Nombres",
+            "last_name": "Apellidos",
+        }
+        help_texts = {"username": "Sin espacios. Es con lo que iniciara sesion."}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["rol"].initial = RolUsuario.CIUDADANO
+        self.fields["password1"].label = "Contrasena"
+        self.fields["password2"].label = "Repita la contrasena"
+        self._estilizar()
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").lower()
+        if email and Usuario.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError("Ya existe una cuenta con ese correo.")
+        return email
 
 
 class UsuarioAdminForm(MixinBootstrap, forms.ModelForm):

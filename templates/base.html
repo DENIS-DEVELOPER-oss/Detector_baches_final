@@ -52,12 +52,9 @@
       <a class="enlace-nav {% if vista == 'analisis:estadisticas' %}activo{% endif %}" href="{% url 'analisis:estadisticas' %}">
         <i class="bi bi-bar-chart"></i> Estadisticas
       </a>
-      <a class="enlace-nav {% if vista == 'usuarios:gestion' or vista == 'usuarios:editar' %}activo{% endif %}"
+      <a class="enlace-nav {% if vista == 'usuarios:gestion' or vista == 'usuarios:editar' or vista == 'usuarios:crear' %}activo{% endif %}"
          href="{% url 'usuarios:gestion' %}">
         <i class="bi bi-people"></i> Usuarios
-      </a>
-      <a class="enlace-nav" href="{% url 'admin:index' %}">
-        <i class="bi bi-sliders"></i> Panel Django
       </a>
       {% endif %}
 

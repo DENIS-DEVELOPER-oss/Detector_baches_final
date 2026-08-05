@@ -132,6 +132,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # del proyecto; en uso real pongalo a False y cambie las contrasenas.
 MOSTRAR_CUENTAS_DEMO = env_bool("MOSTRAR_CUENTAS_DEMO", True)
 
+# El panel de administracion de Django esta desmontado: la gestion de usuarios
+# se hace desde la propia aplicacion. Actívelo solo para tareas puntuales.
+ADMIN_DJANGO = env_bool("ADMIN_DJANGO", False)
+ADMIN_DJANGO_URL = env("ADMIN_DJANGO_URL", "panel-interno/").strip("/") + "/"
+
 LOGIN_URL = "usuarios:login"
 LOGIN_REDIRECT_URL = "analisis:panel"
 LOGOUT_REDIRECT_URL = "usuarios:login"

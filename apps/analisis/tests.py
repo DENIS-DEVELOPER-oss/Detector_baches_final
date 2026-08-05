@@ -275,6 +275,29 @@ class PaginasTest(TestCase):
             "Hay coordenadas con coma decimal dentro del JavaScript",
         )
 
+    def test_las_tablas_anchas_se_pueden_desplazar(self):
+        """Sin envoltorio, una tabla de muchas columnas rompe la vista en movil."""
+        import re
+
+        for nombre in ("analisis:historial", "analisis:panel", "usuarios:perfil"):
+            html = self.client.get(reverse(nombre)).content.decode()
+            for tabla in re.finditer(r"<table.*?</table>", html, re.S):
+                cabecera = re.search(r"<tr.*?</tr>", tabla.group(0), re.S)
+                columnas = len(re.findall(r"<t[hd]", cabecera.group(0))) if cabecera else 0
+                if columnas <= 3:
+                    continue  # clave/valor: cabe de sobra
+                envuelta = "table-responsive" in html[max(0, tabla.start() - 400):tabla.start()]
+                self.assertTrue(
+                    envuelta, f"Tabla de {columnas} columnas sin envolver en {nombre}"
+                )
+
+    def test_todas_las_paginas_declaran_el_viewport(self):
+        for nombre in ("analisis:panel", "analisis:historial", "analisis:mapa",
+                       "deteccion:modulo", "usuarios:perfil"):
+            with self.subTest(pagina=nombre):
+                html = self.client.get(reverse(nombre)).content.decode()
+                self.assertIn('name="viewport"', html)
+
     def test_los_graficos_tienen_contenedor_con_altura(self):
         """Chart.js con maintainAspectRatio:false lo exige, o no dibuja nada."""
         import re

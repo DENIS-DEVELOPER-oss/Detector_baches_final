@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block titulo %}Crear usuario{% endblock %}
+{% block ruta %}Crear usuario{% endblock %}
+
+{% block contenido %}
+<div class="encabezado-pagina">
+  <div>
+    <h1>Crear usuario</h1>
+    <p class="subtitulo">La cuenta queda activa y lista para iniciar sesion.</p>
+  </div>
+  <a href="{% url 'usuarios:gestion' %}" class="btn btn-outline-secondary">Volver</a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="tarjeta">
+      <div class="tarjeta-cabecera"><h2 class="tarjeta-titulo">Datos de la cuenta</h2></div>
+
+      <form method="post" novalidate class="tarjeta-cuerpo">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2 small">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+          {% for campo in form %}
+            <div class="col-md-6">
+              <label class="form-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+              {{ campo }}
+              {% if campo.help_text %}
+                <div class="form-text small">{{ campo.help_text|safe }}</div>
+              {% endif %}
+              {% for error in campo.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-4">
+          <button class="btn btn-primary fw-semibold" type="submit">
+            <i class="bi bi-person-plus"></i> Crear usuario
+          </button>
+          <a class="btn btn-outline-secondary" href="{% url 'usuarios:gestion' %}">Cancelar</a>
+        </div>
+
+        <div class="form-text small mt-3">
+          El <strong>rol</strong> decide que puede hacer: un ciudadano solo analiza y ve
+          su historial; un administrador lo ve todo y gestiona usuarios.
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

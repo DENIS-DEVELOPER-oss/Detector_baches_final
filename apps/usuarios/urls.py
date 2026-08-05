@@ -11,5 +11,6 @@ urlpatterns = [
     # No hay registro publico: las cuentas las crea el administrador.
     # Gestion (solo administrador)
     path("gestion/", views.UsuarioListView.as_view(), name="gestion"),
+    path("gestion/nuevo/", views.UsuarioCreateView.as_view(), name="crear"),
     path("gestion/<int:pk>/editar/", views.UsuarioUpdateView.as_view(), name="editar"),
 ]
