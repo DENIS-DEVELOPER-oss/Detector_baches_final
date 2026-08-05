@@ -1,12 +1,29 @@
 # Despliegue en un VPS con Ubuntu
 
 Guía completa para poner el Detector de Baches en un servidor propio con acceso SSH
-(DigitalOcean, Hetzner, Contabo, AWS EC2…).
+(Hostinger, DigitalOcean, Hetzner, Contabo, AWS EC2…).
 
 **Requisitos mínimos del servidor**: Ubuntu 22.04 o 24.04, **2 GB de RAM** (4 GB
 recomendado: cada worker carga el modelo YOLO) y **10 GB de disco**.
 
 Sustituya `midominio.com` por su dominio y `denis` por su usuario en todo el documento.
+
+## ¿Tiene dominio?
+
+De esto depende un ajuste importante:
+
+| Situación | Qué hacer |
+|---|---|
+| **Tengo dominio** apuntando al servidor | Siga la guía completa, incluido el paso 9 (HTTPS) |
+| **Solo tengo la IP** | Ponga `SECURE_SSL_REDIRECT=False` en el `.env` y **sáltese el paso 9** |
+
+Sin certificado y con `SECURE_SSL_REDIRECT=True`, el navegador entra en un bucle de
+redirecciones. Y aunque lo evitara, las cookies seguras no viajan por HTTP y **sería
+imposible iniciar sesión**, sin ningún mensaje que lo explique. Por eso ese ajuste
+desactiva las tres cosas a la vez.
+
+> Por IP funciona todo, pero **las contraseñas viajan sin cifrar**. Es aceptable para
+> probar; en cuanto tenga dominio, active HTTPS.
 
 ---
 
@@ -119,8 +136,15 @@ nano .env
 ```ini
 SECRET_KEY=pegue-aqui-la-clave-que-acaba-de-generar
 DEBUG=False
+
+# Con dominio:
 ALLOWED_HOSTS=midominio.com,www.midominio.com
 CSRF_TRUSTED_ORIGINS=https://midominio.com,https://www.midominio.com
+
+# Solo con IP: use estas dos lineas en lugar de las anteriores y anada
+# SECURE_SSL_REDIRECT=False
+# ALLOWED_HOSTS=203.0.113.10
+# CSRF_TRUSTED_ORIGINS=http://203.0.113.10
 
 DB_NAME=baches_db
 DB_USER=baches
@@ -275,6 +299,9 @@ porque son archivos de usuario y conviene cachearlos.
 
 ## 9. HTTPS
 
+> **Sáltese este paso si solo tiene la IP.** Let's Encrypt no emite certificados para
+> direcciones IP; necesita un dominio apuntando al servidor.
+
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d midominio.com -d www.midominio.com
@@ -346,6 +373,42 @@ Automatícelo con `crontab -e`:
 
 ---
 
+## Notas para Hostinger
+
+- **Firewall**: el panel muestra «Reglas del firewall: 0», lo que significa que **no hay
+  ninguna regla y todo el tráfico pasa**. Configure `ufw` en el propio servidor
+  (paso 1b, más abajo). Si además crea reglas en el panel, abra 22, 80 y 443.
+- **Acceso root**: Hostinger entrega el VPS con acceso `root`. Trabajar siempre como root
+  es arriesgado; el paso 1b crea un usuario normal.
+- **Snapshots**: el panel ofrece copias del disco entero. Son útiles, pero **no sustituyen
+  al `mysqldump`**: restaurar un snapshot revierte todo el servidor, no solo la base.
+  Haga uno *antes* de empezar, para poder volver atrás si algo sale mal.
+- **KVM 2** (2 vCPU, 8 GB de RAM) va sobrado. Puede subir a `WEB_CONCURRENCY=3` en el
+  `.env` si quiere atender más análisis a la vez.
+
+### 1b. Usuario y firewall
+
+```bash
+# Como root, crear un usuario normal
+adduser denis
+usermod -aG sudo denis
+
+# Firewall: solo SSH, HTTP y HTTPS
+ufw allow OpenSSH
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
+ufw status
+```
+
+Cierre la sesión y vuelva a entrar como el usuario nuevo:
+
+```bash
+ssh denis@LA_IP_DE_SU_VPS
+```
+
+> No habilite `ufw` sin haber permitido antes OpenSSH: se quedaría fuera del servidor.
+
 ## Problemas frecuentes
 
 | Síntoma | Causa y solución |
@@ -357,6 +420,9 @@ Automatícelo con `crontab -e`:
 | El vídeo no se reproduce | Falta ffmpeg: `sudo apt install ffmpeg` y luego `python manage.py recodificar_videos` |
 | El servicio muere al analizar | Poca RAM. Baje a `WEB_CONCURRENCY=1` o amplíe el servidor |
 | Los estáticos no cargan | Falta `collectstatic`, o `DEBUG=True` en el `.env` |
+| `ValueError: Missing staticfiles manifest entry` | Falta `collectstatic` |
+| Entro por IP y no puedo iniciar sesión | Falta `SECURE_SSL_REDIRECT=False` en el `.env`: las cookies seguras no viajan por HTTP |
+| `DisallowedHost` | Añada el dominio o la IP a `ALLOWED_HOSTS` |
 
 ---
 

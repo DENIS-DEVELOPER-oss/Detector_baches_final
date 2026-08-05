@@ -171,17 +171,28 @@ STORAGES = {
 # Solo se aplica con DEBUG=False, para no estorbar en desarrollo (donde no hay
 # HTTPS y las cookies seguras impedirian iniciar sesion).
 if not DEBUG:
-    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30       # 30 dias
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    # Todo lo que depende de HTTPS se activa junto. Si el servidor todavia no
+    # tiene certificado (por ejemplo, mientras se accede por IP), poner
+    # SECURE_SSL_REDIRECT=False en el .env lo desactiva por completo.
+    #
+    # Es importante que vaya en bloque: con cookies seguras sobre HTTP el
+    # navegador no las envia y resulta imposible iniciar sesion, sin ningun
+    # mensaje de error que lo explique.
+    HTTPS_ACTIVO = env_bool("SECURE_SSL_REDIRECT", True)
+
+    SECURE_SSL_REDIRECT = HTTPS_ACTIVO
+    SESSION_COOKIE_SECURE = HTTPS_ACTIVO
+    CSRF_COOKIE_SECURE = HTTPS_ACTIVO
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30 if HTTPS_ACTIVO else 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = HTTPS_ACTIVO
+    SECURE_HSTS_PRELOAD = HTTPS_ACTIVO
+
+    # Independientes del certificado
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = "same-origin"
     X_FRAME_OPTIONS = "DENY"
-    # Detras de un proxy (Render, Railway, nginx) la peticion llega por HTTP
-    # y solo esta cabecera revela que el cliente uso HTTPS.
+    # Detras de nginx la peticion llega por HTTP y solo esta cabecera revela
+    # que el cliente uso HTTPS.
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
