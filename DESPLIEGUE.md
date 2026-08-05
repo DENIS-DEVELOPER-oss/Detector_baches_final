@@ -150,13 +150,35 @@ chmod 600 .env
 
 ```bash
 python manage.py migrate
-python manage.py cargar_datos_iniciales --sin-usuarios   # solo las 20 zonas
-python manage.py createsuperuser                         # su cuenta real
+python manage.py cargar_datos_iniciales    # 20 zonas + las 4 cuentas de prueba
 python manage.py collectstatic --noinput
 ```
 
-Use `--sin-usuarios` para **no crear las cuentas de demostración** (`admin123` y compañía)
-en un servidor público.
+### Sobre las cuentas de prueba
+
+El sistema se despliega como **demostración abierta**: la pantalla de acceso muestra las
+cuatro cuentas con su contraseña para que cualquiera pueda probarlo.
+
+**Esto implica que cualquier visitante puede entrar como `admin`** y borrar análisis,
+usuarios y zonas. Es una decisión consciente, apropiada para presentar el proyecto.
+
+Si más adelante quiere cerrarlo:
+
+```bash
+# 1. Ocultar el bloque de la pantalla de acceso
+echo "MOSTRAR_CUENTAS_DEMO=False" >> .env
+
+# 2. Crear su cuenta real y borrar las de prueba
+python manage.py createsuperuser
+python manage.py shell -c "
+from apps.usuarios.models import Usuario
+Usuario.objects.filter(username__in=['admin','vanessa','denis','aldo']).delete()"
+
+sudo systemctl restart baches
+```
+
+Mientras siga abierto, tenga programada la copia de seguridad (sección
+[Copia de seguridad](#copia-de-seguridad)): si alguien borra algo, se restaura en un minuto.
 
 Compruebe que Django está conforme:
 
@@ -340,7 +362,9 @@ Automatícelo con `crontab -e`:
 
 ## Después de desplegar
 
-1. **Borre las cuentas de demostración** si las creó: `vanessa`, `denis`, `aldo`, `admin`.
-2. Verifique en GitHub que **no se subió ningún `.env`**.
-3. Programe las copias de seguridad.
-4. `media/` crece rápido con vídeos: vigile el disco con `df -h`.
+1. Verifique en GitHub que **no se subió ningún `.env`** ni ningún `.sql`.
+2. **Programe las copias de seguridad.** Con las cuentas de prueba visibles, cualquiera
+   puede borrar datos: la copia es su red de seguridad.
+3. `media/` crece rápido con vídeos: vigile el disco con `df -h`.
+4. Entre y compruebe el flujo completo: iniciar sesión con una cuenta de prueba, subir una
+   foto con un bache y ver que aparece anotada y clasificada.
