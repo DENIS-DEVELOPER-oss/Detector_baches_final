@@ -1,0 +1,22 @@
+.git
+.gitignore
+.gitattributes
+
+# Secretos: se pasan con --env-file o variables de entorno
+.env
+.env.*
+!.env.example
+
+# Los genera la propia imagen
+__pycache__/
+*.py[cod]
+staticfiles/
+
+# Archivos de usuarios: van en un volumen, no dentro de la imagen
+media/
+
+.venv/
+venv/
+.vscode/
+.idea/
+*.log
