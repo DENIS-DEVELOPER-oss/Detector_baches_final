@@ -287,10 +287,15 @@ server {
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/baches /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t          # debe decir: syntax is ok
 sudo systemctl reload nginx
 ```
+
+> **Si el servidor ya aloja otra aplicación**, no borre `sites-enabled/default` ni ningún
+> otro sitio: dejaría de responder. Vea [Convivir con otra aplicación](#convivir-con-otra-aplicacion).
+>
+> En un servidor recién instalado, y solo entonces, puede quitar el sitio de ejemplo:
+> `sudo rm -f /etc/nginx/sites-enabled/default`
 
 Los estáticos los sirve WhiteNoise desde la propia aplicación; `media/` va por nginx
 porque son archivos de usuario y conviene cachearlos.
@@ -372,6 +377,85 @@ Automatícelo con `crontab -e`:
 ```
 
 ---
+
+## Convivir con otra aplicación
+
+Si el VPS ya sirve otra web (Laravel, WordPress…), hay **tres cosas que pueden romperla**.
+Antes de tocar nada, mire qué hay:
+
+```bash
+ls -l /etc/nginx/sites-enabled/            # que sitios hay activos
+sudo grep -r "server_name\|listen" /etc/nginx/sites-enabled/
+sudo ss -tlnp | grep -E ':(80|443|3306|8000)'
+systemctl is-active mariadb mysql nginx php8.3-fpm 2>/dev/null
+```
+
+### 1. nginx: no toque los sitios existentes
+
+- **Nunca** borre `sites-enabled/default` ni otros sitios: puede ser el que sirve la otra
+  aplicación.
+- Si la otra web responde en la IP (es el `default_server`), **dos aplicaciones no pueden
+  compartir el puerto 80 sin dominios distintos**. Tiene dos salidas:
+
+  **a) Un subdominio** (recomendado si tiene dominio). Apunte `baches.midominio.com` al
+  servidor y use ese `server_name`. Cada web con el suyo, ambas en el puerto 80.
+
+  **b) Otro puerto**, si aún no tiene dominio. Cambie el bloque del paso 8 por:
+
+  ```nginx
+  server {
+      listen 8080;
+      server_name _;
+      # ...el resto igual...
+  }
+  ```
+
+  Abra el puerto (`sudo ufw allow 8080/tcp`) y entre por `http://SU_IP:8080`. Añada esa
+  dirección a `ALLOWED_HOSTS` y `CSRF_TRUSTED_ORIGINS` en el `.env`.
+
+### 2. MySQL: no reconfigure lo que ya funciona
+
+**No ejecute `mysql_secure_installation`** si la otra aplicación ya usa MySQL: puede
+cambiar la contraseña de `root` y dejarla sin acceso. Cree solo lo suyo:
+
+```bash
+sudo mysql
+```
+
+```sql
+CREATE DATABASE baches_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'baches'@'localhost' IDENTIFIED BY 'UNA_CLAVE_FUERTE';
+GRANT ALL PRIVILEGES ON baches_db.* TO 'baches'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+El `GRANT` es solo sobre `baches_db`: este usuario no puede tocar las bases de la otra
+aplicación.
+
+### 3. Firewall: compruebe antes de activarlo
+
+```bash
+sudo ufw status
+```
+
+Si dice **inactive**, la otra web está funcionando sin firewall. Activarlo sin abrir sus
+puertos la dejaría fuera de servicio. Abra todo lo necesario **antes** del `enable`:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 8080/tcp        # solo si usa la opcion del puerto alternativo
+sudo ufw enable
+```
+
+Si ya está **active**, limítese a añadir el puerto que necesite.
+
+### Lo que no molesta
+
+Gunicorn (8000) y PHP-FPM conviven sin problema: son procesos distintos y nginx reparte
+según el `server_name` o el puerto. El modelo YOLO ocupa ~200 MB de RAM por worker;
+vigile con `free -h` que quede holgura para la otra aplicación.
 
 ## Notas para Hostinger
 
