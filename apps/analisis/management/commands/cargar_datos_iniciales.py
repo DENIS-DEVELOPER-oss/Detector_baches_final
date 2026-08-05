@@ -14,7 +14,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from apps.analisis.models import Ciudad, Zona
-from apps.usuarios.models import RolUsuario
+from apps.usuarios.cuentas_demo import CUENTAS_DEMO
 
 Usuario = get_user_model()
 
@@ -43,13 +43,9 @@ ZONAS = [
     ("Salida a Juliaca", Ciudad.PUNO, -15.8251, -70.0203, "Carretera Puno - Juliaca"),
 ]
 
-USUARIOS = [
-    # usuario,   nombres,   apellidos,             rol,                   ciudad,    clave,        superusuario
-    ("admin",   "Admin",   "General",             RolUsuario.ADMIN,     "JULIACA", "admin123",   True),
-    ("vanessa", "Vanessa", "Choquehuanca Mamani", RolUsuario.CIUDADANO, "JULIACA", "vanessa123", False),
-    ("denis",   "Denis",   "Quispe Apaza",        RolUsuario.CIUDADANO, "PUNO",    "denis123",   False),
-    ("aldo",    "Aldo",    "Ccama Condori",       RolUsuario.CIUDADANO, "JULIACA", "aldo123",    False),
-]
+# Las cuentas viven en apps.usuarios.cuentas_demo: de ahi las toma tambien la
+# pantalla de acceso, para que no anuncie una contrasena que ya no funciona.
+USUARIOS = CUENTAS_DEMO
 
 
 class Command(BaseCommand):
@@ -87,7 +83,8 @@ class Command(BaseCommand):
 
         reiniciar = opciones["reiniciar_usuarios"]
 
-        for username, nombres, apellidos, rol, ciudad, clave, superusuario in USUARIOS:
+        for cuenta in USUARIOS:
+            username = cuenta["usuario"]
             usuario = Usuario.objects.filter(username=username).first()
 
             if usuario and not reiniciar:
@@ -100,27 +97,29 @@ class Command(BaseCommand):
             accion = "actualizado" if usuario else "creado"
             usuario = usuario or Usuario(username=username)
 
-            usuario.first_name = nombres
-            usuario.last_name = apellidos
+            usuario.first_name = cuenta["nombres"]
+            usuario.last_name = cuenta["apellidos"]
             usuario.email = f"{username}@baches.pe"
-            usuario.rol = rol
-            usuario.ciudad = ciudad
-            usuario.is_superuser = superusuario
-            usuario.is_staff = superusuario
+            usuario.rol = cuenta["rol"]
+            usuario.ciudad = cuenta["ciudad"]
+            usuario.is_superuser = cuenta["superusuario"]
+            usuario.is_staff = cuenta["superusuario"]
             usuario.is_active = True
             # set_password no pasa por los validadores de AUTH_PASSWORD_VALIDATORS;
             # por eso claves cortas como "admin123" se aceptan aqui, aunque el
             # formulario de registro las rechazaria.
-            usuario.set_password(clave)
+            usuario.set_password(cuenta["clave"])
             usuario.save()
 
             self.stdout.write(
-                self.style.SUCCESS(f"  + Usuario '{username}' {accion} (clave: {clave})")
+                self.style.SUCCESS(
+                    f"  + Usuario '{username}' {accion} (clave: {cuenta['clave']})"
+                )
             )
 
         # Aviso, sin borrar nada: la limpieza es decision de quien administra.
         sobrantes = Usuario.objects.exclude(
-            username__in=[u[0] for u in USUARIOS]
+            username__in=[c["usuario"] for c in USUARIOS]
         ).values_list("username", flat=True)
         if sobrantes:
             self.stdout.write(

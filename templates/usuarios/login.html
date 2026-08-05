@@ -50,6 +50,32 @@
     <i class="bi bi-box-arrow-in-right me-1"></i> Entrar al sistema
   </button>
 </form>
+
+{% if cuentas_demo %}
+<div class="cuentas-demo">
+  <div class="cuentas-demo-titulo">
+    <i class="bi bi-people"></i> Cuentas de prueba
+  </div>
+  <p class="cuentas-demo-ayuda">Pulse una para rellenar el formulario.</p>
+
+  <ul>
+    {% for cuenta in cuentas_demo %}
+      <li>
+        <button type="button" class="cuenta-demo"
+                data-usuario="{{ cuenta.usuario }}" data-clave="{{ cuenta.clave }}">
+          <span class="cuenta-demo-datos">
+            <strong>{{ cuenta.usuario }}</strong>
+            <code>{{ cuenta.clave }}</code>
+          </span>
+          <span class="cuenta-demo-rol {% if cuenta.es_admin %}es-admin{% endif %}">
+            {{ cuenta.rol }}
+          </span>
+        </button>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block js %}
@@ -74,6 +100,18 @@
     aviso.classList.toggle('d-none', !activo);
   });
   campoClave.addEventListener('blur', () => aviso.classList.add('d-none'));
+
+  // Pulsar una cuenta de prueba rellena el formulario
+  const campoUsuario = document.getElementById('{{ form.username.id_for_label }}');
+  document.querySelectorAll('.cuenta-demo').forEach(boton => {
+    boton.addEventListener('click', () => {
+      campoUsuario.value = boton.dataset.usuario;
+      campoClave.value = boton.dataset.clave;
+      document.querySelectorAll('.cuenta-demo').forEach(b => b.classList.remove('elegida'));
+      boton.classList.add('elegida');
+      document.getElementById('btnAcceso').focus();
+    });
+  });
 
   // Evita el doble envio
   document.getElementById('formAcceso').addEventListener('submit', () => {

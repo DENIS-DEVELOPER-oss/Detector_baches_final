@@ -853,6 +853,67 @@ a { text-decoration: none; }
   color: #b0721a;
 }
 
+/* -- Cuentas de prueba ---------------------------------------------------- */
+.cuentas-demo {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--borde);
+}
+
+.cuentas-demo-titulo {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  margin-bottom: .2rem;
+}
+.cuentas-demo-titulo .bi { color: var(--acento-oscuro); }
+
+.cuentas-demo-ayuda { font-size: .76rem; color: var(--texto-tenue); margin-bottom: .7rem; }
+
+.cuentas-demo ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .35rem; }
+
+.cuenta-demo {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  padding: .45rem .65rem;
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  background: #fff;
+  text-align: left;
+  transition: border-color .15s, background .15s;
+}
+
+.cuenta-demo:hover { border-color: var(--acento); background: var(--acento-claro); }
+.cuenta-demo.elegida { border-color: var(--acento); background: var(--acento-claro); }
+
+.cuenta-demo-datos { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
+.cuenta-demo-datos strong { font-size: .85rem; font-weight: 600; }
+.cuenta-demo-datos code {
+  font-size: .76rem;
+  color: var(--texto-tenue);
+  background: #f2f5f7;
+  padding: .05rem .35rem;
+  border-radius: 3px;
+}
+
+.cuenta-demo-rol {
+  flex-shrink: 0;
+  font-size: .66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--acento-oscuro);
+  background: var(--acento-claro);
+  padding: .15rem .45rem;
+  border-radius: 3px;
+}
+.cuenta-demo-rol.es-admin { color: #fff; background: var(--lateral-fondo); }
+
 /* -- Adaptable ------------------------------------------------------------ */
 @media (max-width: 991.98px) {
   .acceso { grid-template-columns: 1fr; }

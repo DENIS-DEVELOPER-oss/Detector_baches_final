@@ -127,6 +127,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# Muestra las cuentas de prueba en la pantalla de acceso, para que cualquiera
+# pueda probar el sistema. Tiene sentido en una demostracion o en la defensa
+# del proyecto; en uso real pongalo a False y cambie las contrasenas.
+MOSTRAR_CUENTAS_DEMO = env_bool("MOSTRAR_CUENTAS_DEMO", True)
+
 LOGIN_URL = "usuarios:login"
 LOGIN_REDIRECT_URL = "analisis:panel"
 LOGOUT_REDIRECT_URL = "usuarios:login"

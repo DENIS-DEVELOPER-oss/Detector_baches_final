@@ -1,5 +1,6 @@
 """Vistas de autenticacion, perfil y gestion de usuarios."""
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView, LogoutView
@@ -8,6 +9,7 @@ from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views.generic import ListView, UpdateView
 
+from .cuentas_demo import cuentas_para_mostrar
 from .forms import FiltroUsuarioForm, LoginForm, PerfilForm, UsuarioAdminForm
 from .models import RolUsuario, Usuario
 
@@ -24,6 +26,19 @@ class AccesoView(LoginView):
     template_name = "usuarios/login.html"
     authentication_form = LoginForm
     redirect_authenticated_user = True
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # Solo se anuncian las cuentas que existen de verdad: si el
+        # administrador borro alguna, deja de aparecer.
+        if settings.MOSTRAR_CUENTAS_DEMO:
+            existentes = set(
+                Usuario.objects.activos().values_list("username", flat=True)
+            )
+            ctx["cuentas_demo"] = [
+                c for c in cuentas_para_mostrar() if c["usuario"] in existentes
+            ]
+        return ctx
 
     def form_valid(self, form):
         # Sin marcar, la sesion muere al cerrar el navegador.
